@@ -1,0 +1,5 @@
+Swerve v5.2
+
+Added minimums and tolerances with conditionals to PID outputs (azimuth + heading).
+Off-boarded telemetry to it's own class.
+Correctly calculated constraints for motion profiles and velocity limits.

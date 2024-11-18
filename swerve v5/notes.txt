@@ -1,0 +1,6 @@
+Swerve v5
+
+First working prototype.
+Single class model with open loop for drive velocity and PID control only for azimuth.
+High P and D gains on PID loops, motion profile not optimized, velocity limits not optimized.
+Initially using flight stick, poor resolution was found with stick. Switched to Xbox controller for better fine control.
