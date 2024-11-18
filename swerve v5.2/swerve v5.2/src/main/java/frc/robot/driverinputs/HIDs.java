@@ -115,6 +115,7 @@ public class HIDs extends SubsystemBase {
 
     //conditionals for heading control IN RADS
     if (xbox.getRightBumper() == true) {
+      
       headingdesired = headingdesired - 0.1;
     }
     if (xbox.getLeftBumper() == true) {
