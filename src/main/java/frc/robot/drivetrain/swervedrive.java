@@ -115,7 +115,7 @@ public class swervedrive extends SubsystemBase {
   private static final double turnPIDkP = 1.25;
   private static final double turnPIDkD = 0.35;
   private static final double turntol = 0.05*pi;
-  private static final double headingPIDkP = 6;
+  private static final double headingPIDkP = 7;
   private static final double headingPIDkD = 0;
   private static final double headingtol = 0.05*pi;
 
@@ -290,10 +290,29 @@ public class swervedrive extends SubsystemBase {
     RRdriveveldes = optimizedstates[3].speedMetersPerSecond;
 
     //PID calculation
-    FLturnPIDout = FLturnfilter.calculate(FLturnPID.calculate(FLturnposactual, FLturnposdes));
-    FRturnPIDout = FRturnfilter.calculate(FRturnPID.calculate(FRturnposactual, FRturnposdes));
-    RLturnPIDout = RLturnfilter.calculate(RLturnPID.calculate(RLturnposactual, RLturnposdes));
-    RRturnPIDout = RRturnfilter.calculate(RRturnPID.calculate(RRturnposactual, RRturnposdes));
+    if (FLturnerror < turntol) {
+      FLturnPIDout = 0;
+    } else {
+      FLturnPIDout = FLturnfilter.calculate(FLturnPID.calculate(FLturnposactual, FLturnposdes));
+    }
+
+    if (FRturnerror < turntol) {
+      FRturnPIDout = 0;
+    } else {
+      FRturnPIDout = FRturnfilter.calculate(FRturnPID.calculate(FRturnposactual, FRturnposdes));
+    }
+
+    if (RLturnerror < turntol) {
+      RLturnPIDout = 0;
+    } else {
+      RLturnPIDout = RLturnfilter.calculate(RLturnPID.calculate(RLturnposactual, RLturnposdes));
+    }
+
+    if (RRturnerror < turntol) {
+      RRturnPIDout = 0;
+    } else {
+      RRturnPIDout = RRturnfilter.calculate(RRturnPID.calculate(RRturnposactual, RRturnposdes));
+    }
 
     //write PID calculations and speeds for drive
     FLdrive.setVoltage((FLdriveveldes / maxlinspeedms) * maxappliedvoltage);
@@ -304,71 +323,6 @@ public class swervedrive extends SubsystemBase {
     FRturn.setVoltage((FRturnPIDout / maxrotspeedrads) * maxappliedvoltage);
     RLturn.setVoltage((RLturnPIDout / maxrotspeedrads) * maxappliedvoltage);
     RRturn.setVoltage((RRturnPIDout / maxrotspeedrads) * maxappliedvoltage);
-  }
-
-
-
-  /**
-   * 
-   * @return Array of doubles with module data.
-   * 0 = FLdrivevel
-   * 1 = FLturnpos
-   * 2 = FRdrivevel
-   * 3 = FRturnpos
-   * 4 = RLdrivevel
-   * 5 = RLturnpos
-   * 6 = RRdrivevel
-   * 7 = RRturnpos
-   */
-  public double[] GetDrivetrainData(){
-    return new double[] {
-    FLdrivevelactual,
-    FLturnposactual,
-    FRdrivevelactual,
-    FRturnposactual,
-    RLdrivevelactual,
-    RLturnposactual,
-    RRdrivevelactual,
-    RRturnposactual,
-    headingactual
-    };
-  }
-
-  public double[] GetDesiredData() {
-    return new double[] {
-      FLdriveveldes,
-      FLturnposdes,
-      FRdriveveldes,
-      FRturnposdes,
-      RLdriveveldes,
-      RLturnposdes,
-      RRdriveveldes,
-      RRturnposdes,
-      headingdes
-    };
-  }
-
-  public double[] GetPIDoutData() {
-    return new double[] {
-      0,
-      0,
-      0,
-      0,
-      FLturnPIDout,
-      FRturnPIDout,
-      RLturnPIDout,
-      RRturnPIDout,
-      headingPIDout
-    };
-  }
-
-  public double[] GetModuleError() {
-    return new double[] {
-      FLturnerror,
-      FRturnerror,
-      RLturnerror,
-      RRturnerror
-    };
   }
 
   public void telemetry(){
@@ -410,6 +364,11 @@ public class swervedrive extends SubsystemBase {
     SmartDashboard.putNumber("Zrotspeeddes", Zrotdes);
     SmartDashboard.putNumber("Xspeeddes", Xspeeddes);
     SmartDashboard.putNumber("HeadingPIDout", headingPIDout);
+
+    SmartDashboard.putNumber("FLturnerror", FLturnerror);
+    SmartDashboard.putNumber("FRturnerror", FRturnerror);
+    SmartDashboard.putNumber("RLturnerror", RLturnerror);
+    SmartDashboard.putNumber("RRturnerror", RRturnerror);
   }
 
   @Override
@@ -435,10 +394,10 @@ public class swervedrive extends SubsystemBase {
     //gyro
     headingactual = MathUtil.angleModulus((-gyro.getAngle()/180)*pi);
     //angle error calcs
-    FLturnerror = FLturnposactual - FLturnposdes;
-    FRturnerror = FRturnposactual - FRturnposdes;
-    RLturnerror = RLturnposactual - RLturnposdes;
-    RRturnerror = RRturnposactual - RRturnposdes;
+    FLturnerror = Math.abs(FLturnposactual - FLturnposdes);
+    FRturnerror = Math.abs(FRturnposactual - FRturnposdes);
+    RLturnerror = Math.abs(RLturnposactual - RLturnposdes);
+    RRturnerror = Math.abs(RRturnposactual - RRturnposdes);
 
   }
 }
