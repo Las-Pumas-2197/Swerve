@@ -5,12 +5,10 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.driverinputs.HIDs;
 import frc.robot.drivetrain.swervedrive;
-import frc.robot.utils.telemetry;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
@@ -24,7 +22,6 @@ public class Robot extends TimedRobot {
   private double[] velocityData;
 
   //telemetry object for writing data to dashboard
-  private final telemetry telemetryhandler = new telemetry();
 
   @Override
   public void robotInit() {
@@ -34,8 +31,6 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     CommandScheduler.getInstance().run();
-    telemetryhandler.runHIDTelemetry();
-    telemetryhandler.runSwerveTelemetry();
   }
 
   @Override

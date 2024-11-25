@@ -20,6 +20,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.math.MathUtil;
 
@@ -148,6 +149,10 @@ public class swervedrive extends SubsystemBase {
   private static final double driveposconvfactor = (0.0762*pi / 4.71428); //meters
   private static final double turnposconvfactor = 2*pi; //rads
 
+  //Initializations for desired speeds
+  private double Yspeeddes;
+  private double Xspeeddes;
+  private double Zrotdes;
   //initializations for swervedrive
   public swervedrive() {
     //instantiate motor controllers
@@ -242,6 +247,9 @@ public class swervedrive extends SubsystemBase {
    */
   public void driveIKinVCL(double Xspeed, double Yspeed, double Zrot, double HeadingDesired, boolean HeadingCL) {
     //conditionals for heading controller
+    Xspeeddes = Xspeed;
+    Yspeeddes = Yspeed;
+    Zrotdes = Zrot;
     headingdes = MathUtil.angleModulus(HeadingDesired);
     double Zinput;
     if (HeadingCL) {
@@ -374,9 +382,58 @@ public class swervedrive extends SubsystemBase {
     };
   }
 
+  public double[] GetModuleError() {
+    return new double[] {
+      FLturnerror,
+      FRturnerror,
+      RLturnerror,
+      RRturnerror
+    };
+  }
+
+  public void telemetry(){
+    SmartDashboard.putNumber("FLTurnPosActual", FLturnposactual);
+    SmartDashboard.putNumber("FRTurnPosActual", FRturnposactual);
+    SmartDashboard.putNumber("RLTurnPosActual", RLturnposactual);
+    SmartDashboard.putNumber("RRTurnPosActual", RRturnposactual);
+
+    SmartDashboard.putNumber("FLTurnPosDesired", FLturnposdes);
+    SmartDashboard.putNumber("FRTurnPosDesired", FRturnposdes);
+    SmartDashboard.putNumber("RLTurnPosDesired", RLturnposdes);
+    SmartDashboard.putNumber("RRTurnPosDesired", RRturnposdes);
+
+    SmartDashboard.putNumber("FLDriveVelActual", FLdrivevelactual);
+    SmartDashboard.putNumber("FRDriveVelActual", FRdrivevelactual);
+    SmartDashboard.putNumber("RLDriveVelActual", RLdrivevelactual);
+    SmartDashboard.putNumber("RRDriveVelActual", RRdrivevelactual);   
+    
+    SmartDashboard.putNumber("FLDriveVelDesired", FLdriveveldes);
+    SmartDashboard.putNumber("FRDriveVelDesired", FRdriveveldes);
+    SmartDashboard.putNumber("RLDriveVelDesired", RLdriveveldes);
+    SmartDashboard.putNumber("RRDriveVelDesired", RRdriveveldes);
+
+    SmartDashboard.putNumber("FLturnPIDout", FLturnPIDout);
+    SmartDashboard.putNumber("FRturnPIDout", FRturnPIDout);
+    SmartDashboard.putNumber("RLturnPIDout", RLturnPIDout);
+    SmartDashboard.putNumber("RRturnPIDout", RRturnPIDout);
+
+    SmartDashboard.putNumber("FLdrivePIDout", 0);
+    SmartDashboard.putNumber("FRdrivePIDout", 0);
+    SmartDashboard.putNumber("RLdrivePIDout", 0);
+    SmartDashboard.putNumber("RRdrivePIDout", 0);
+
+    SmartDashboard.putNumber("HeadingActual", headingactual);
+    SmartDashboard.putNumber("HeadingDesired", headingdes);
+
+    SmartDashboard.putNumber("HeadingDesired", headingdes);
+    SmartDashboard.putNumber("Yspeeddes", Yspeeddes);
+    SmartDashboard.putNumber("Zrotspeeddes", Zrotdes);
+    SmartDashboard.putNumber("Xspeeddes", Xspeeddes);
+    SmartDashboard.putNumber("HeadingPIDout", headingPIDout);
+  }
+
   @Override
   public void periodic() {
-
 
     //gyroscope and encoder value condtioning, write conditioned values
     //+0.5pi rotation needed
