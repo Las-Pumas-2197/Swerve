@@ -19,7 +19,6 @@ public class Robot extends TimedRobot {
   
   //construct input data from HIDs class
   private final HIDs HIDs = new HIDs();
-  private double[] velocityData;
 
   //telemetry object for writing data to dashboard
 
@@ -66,7 +65,8 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    swervedrive.driveIKinVCL(velocityData[0], velocityData[1], velocityData[2], HIDs.getXboxVelocityData()[3], false);
+    swervedrive.driveIKinVCL(HIDs.getXboxVelocityData()[0], HIDs.getXboxVelocityData()[1], 0 , HIDs.getXboxVelocityData()[3], false);
+    swervedrive.telemetry();
   }
 
   @Override

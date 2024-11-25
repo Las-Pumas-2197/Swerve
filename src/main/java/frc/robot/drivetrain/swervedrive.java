@@ -246,18 +246,17 @@ public class swervedrive extends SubsystemBase {
    * @param HeadingCL
    */
   public void driveIKinVCL(double Xspeed, double Yspeed, double Zrot, double HeadingDesired, boolean HeadingCL) {
+
     //conditionals for heading controller
-    Xspeeddes = Xspeed;
-    Yspeeddes = Yspeed;
-    Zrotdes = Zrot;
     headingdes = MathUtil.angleModulus(HeadingDesired);
+
     double Zinput;
+    
     if (HeadingCL) {
       Zinput = Zrot;
     } else {
       headingPIDout = headingPID.calculate(headingactual, headingdes);
       Zinput = headingPIDout;
-
     }
 
     //Chassis Speeds object for IK calcs
@@ -290,30 +289,11 @@ public class swervedrive extends SubsystemBase {
     RLdriveveldes = optimizedstates[2].speedMetersPerSecond;
     RRdriveveldes = optimizedstates[3].speedMetersPerSecond;
 
-    //PID calculations
-    if (FLturnerror < turntol) {
-      FLturnPIDout = 0;
-    } else {
-      FLturnPIDout = FLturnfilter.calculate(MathUtil.clamp(FLturnPID.calculate(FLturnposactual, FLturnposdes), turnoutminimum, turnoutmaximum));
-    }
-
-    if (FRturnerror < turntol) {
-      FRturnPIDout = 0;
-    } else {
-      FRturnPIDout = FRturnfilter.calculate(MathUtil.clamp(FRturnPID.calculate(FRturnposactual, FRturnposdes), turnoutminimum, turnoutmaximum));
-    }
-
-    if (RLturnerror < turntol) {
-      RLturnPIDout = 0;
-    } else {
-      RLturnPIDout = RLturnfilter.calculate(MathUtil.clamp(RLturnPID.calculate(RLturnposactual, RLturnposdes), turnoutminimum, turnoutmaximum));
-    }
-
-    if (RRturnerror < turntol) {
-      RRturnPIDout = 0;
-    } else {
-      RRturnPIDout = RRturnfilter.calculate(MathUtil.clamp(RRturnPID.calculate(RRturnposactual, RRturnposdes), turnoutminimum, turnoutmaximum));
-    }
+    //PID calculation
+    FLturnPIDout = FLturnfilter.calculate(FLturnPID.calculate(FLturnposactual, FLturnposdes));
+    FRturnPIDout = FRturnfilter.calculate(FRturnPID.calculate(FRturnposactual, FRturnposdes));
+    RLturnPIDout = RLturnfilter.calculate(RLturnPID.calculate(RLturnposactual, RLturnposdes));
+    RRturnPIDout = RRturnfilter.calculate(RRturnPID.calculate(RRturnposactual, RRturnposdes));
 
     //write PID calculations and speeds for drive
     FLdrive.setVoltage((FLdriveveldes / maxlinspeedms) * maxappliedvoltage);

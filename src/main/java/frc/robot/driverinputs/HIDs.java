@@ -95,7 +95,7 @@ public class HIDs extends SubsystemBase {
     return new double[] {
       (MathUtil.applyDeadband(-xboxY, xboxdeadbandX)*maxspeedmps)*Math.cos(1.3*Math.cbrt(righttrigger)),
       (MathUtil.applyDeadband(-xboxX, xboxdeadbandY)*maxrotspeedrads)*Math.cos(1.3*Math.cbrt(righttrigger)),
-      (MathUtil.applyDeadband(xboxZ, xboxdeadbandZ)*maxrotspeedrads)*Math.cos(1.3*Math.cbrt(righttrigger)),
+      0,
       headingdesired
     };
   }
