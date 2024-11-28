@@ -277,19 +277,24 @@ public class swervedrive extends SubsystemBase {
     double Zinput;
     
     if (HeadingCL) {
-      //if (headingerror < headingtol) {
-      //  headingPIDout = 0;
-      //} else {
-      //  double headingPIDoutraw = headingPID.calculate(headingactual, headingdes);
-      //  headingPIDout = Math.signum(headingPIDoutraw)*MathUtil.clamp(Math.abs(headingPIDoutraw), headingPIDoutmin, headingPIDoutmax);
-      //}
+      if (headingerror < headingtol) {
+        headingPIDout = 0;
+      } else {
+        double headingPIDoutraw = headingPID.calculate(headingactual, headingdes);
+        headingPIDout = 
+          Math.signum(headingPIDoutraw)*MathUtil.clamp(
+            Math.abs(headingPIDoutraw), headingPIDoutmin, headingPIDoutmax
+          );
+      }
       Zinput = headingPIDout;
     } else {
       Zinput = Zrot;
     }
 
     //Chassis Speeds object for IK calcs
-    ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(Xspeed, Yspeed, Zinput, new Rotation2d(headingactual));
+    ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+      Xspeed, Yspeed, Zinput, new Rotation2d(headingactual)
+    );
     ChassisSpeeds.discretize(speeds, 0.02);
 
     //IK calcs
@@ -302,58 +307,58 @@ public class swervedrive extends SubsystemBase {
       SwerveModuleState.optimize(states[3], new Rotation2d(RRturnposactual))
     };
 
-    //reduce speed by inverse of angle error and add inflate error by multiplier to make more aggressive
-    optimizedstates[0].speedMetersPerSecond *= Math.cos(FLturnerror);
-    optimizedstates[1].speedMetersPerSecond *= Math.cos(FRturnerror);
-    optimizedstates[2].speedMetersPerSecond *= Math.cos(RLturnerror);
-    optimizedstates[3].speedMetersPerSecond *= Math.cos(RRturnerror);
-
-    //write internal generated states to vars
+    //write internal generated states to vars and reduce drive vel by inverse of angle error
+    //may average angle errors for total error and multiply velocity by inverse for less hysteresis
     FLturnposdes = optimizedstates[0].angle.getRadians();
     FRturnposdes = optimizedstates[1].angle.getRadians();
     RLturnposdes = optimizedstates[2].angle.getRadians();
     RRturnposdes = optimizedstates[3].angle.getRadians();
-    FLdriveveldes = optimizedstates[0].speedMetersPerSecond;
-    FRdriveveldes = optimizedstates[1].speedMetersPerSecond;
-    RLdriveveldes = optimizedstates[2].speedMetersPerSecond;
-    RRdriveveldes = optimizedstates[3].speedMetersPerSecond;
+    FLdriveveldes = optimizedstates[0].speedMetersPerSecond * Math.cos(FLturnerror);
+    FRdriveveldes = optimizedstates[1].speedMetersPerSecond * Math.cos(FRturnerror);
+    RLdriveveldes = optimizedstates[2].speedMetersPerSecond * Math.cos(RLturnerror);
+    RRdriveveldes = optimizedstates[3].speedMetersPerSecond * Math.cos(RRturnerror);
 
-    //PID calculations, commented out minimums to implement feedforwards iteratively
+    //PID calculations
     
-    
-    //if (FLturnerror < turntol) {
-    //  FLturnPIDout = 0;
-    //} else {
-    //  double FLturnPIDoutraw = FLturnfilter.calculate(FLturnPID.calculate(FLturnposactual, FLturnposdes));
-    //  FLturnPIDout = Math.signum(FLturnPIDoutraw)*MathUtil.clamp(Math.abs(FLturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
-    //}
+    if (FLturnerror < turntol) {
+      FLturnPIDout = 0;
+    } else {
+      double FLturnPIDoutraw = FLturnfilter.calculate(FLturnPID.calculate(FLturnposactual, FLturnposdes));
+      FLturnPIDout = Math.signum(FLturnPIDoutraw)*MathUtil.clamp(Math.abs(FLturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
+    }
 
-    //if (FRturnerror < turntol) {
-    //  FRturnPIDout = 0;
-    //} else {
-    //  double FRturnPIDoutraw = FRturnfilter.calculate(FRturnPID.calculate(FRturnposactual, FRturnposdes));
-    //  FRturnPIDout = Math.signum(FRturnPIDoutraw)*MathUtil.clamp(Math.abs(FRturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
-    //}
+    if (FRturnerror < turntol) {
+      FRturnPIDout = 0;
+    } else {
+      double FRturnPIDoutraw = FRturnfilter.calculate(FRturnPID.calculate(FRturnposactual, FRturnposdes));
+      FRturnPIDout = Math.signum(FRturnPIDoutraw)*MathUtil.clamp(Math.abs(FRturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
+    }
     
-    //if (RLturnerror < turntol) {
-    //  RLturnPIDout = 0;
-    //} else {
-    //  double RLturnPIDoutraw = RLturnfilter.calculate(RLturnPID.calculate(RLturnposactual, RLturnposdes));
-    //  RLturnPIDout = Math.signum(RLturnPIDoutraw)*MathUtil.clamp(Math.abs(RLturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
-    //}
+    if (RLturnerror < turntol) {
+      RLturnPIDout = 0;
+    } else {
+      double RLturnPIDoutraw = RLturnfilter.calculate(RLturnPID.calculate(RLturnposactual, RLturnposdes));
+      RLturnPIDout = Math.signum(RLturnPIDoutraw)*MathUtil.clamp(Math.abs(RLturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
+    }
 
-    //if (RRturnerror < turntol) {
-    //  RRturnPIDout = 0;
-    //} else {
-    //  double RRturnPIDoutraw = RRturnfilter.calculate(RRturnPID.calculate(RRturnposactual, RRturnposdes));
-    //  RRturnPIDout = Math.signum(RRturnPIDoutraw)*MathUtil.clamp(Math.abs(RRturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
-    //}
+    if (RRturnerror < turntol) {
+      RRturnPIDout = 0;
+    } else {
+      double RRturnPIDoutraw = RRturnfilter.calculate(RRturnPID.calculate(RRturnposactual, RRturnposdes));
+      RRturnPIDout = Math.signum(RRturnPIDoutraw)*MathUtil.clamp(Math.abs(RRturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
+    }
     
+    //drive FF calculations, need to check what output value units are and convert appropriately
+    FLdriveFFout = FLdriveFF.calculate(FLdriveveldes);
+    FRdriveFFout = FRdriveFF.calculate(FRdriveveldes);
+    RLdriveFFout = RLdriveFF.calculate(RLdriveveldes);
+    RRdriveFFout = RRdriveFF.calculate(RRdriveveldes);
+
     //write PID calculations and speeds for drive
-    FLdrive.setVoltage((FLdriveveldes / maxmodulevelmps) * maxappliedvoltage);
-    FRdrive.setVoltage((FRdriveveldes / maxmodulevelmps) * maxappliedvoltage);
-    RLdrive.setVoltage((RLdriveveldes / maxmodulevelmps) * maxappliedvoltage);
-    RRdrive.setVoltage((RRdriveveldes / maxmodulevelmps) * maxappliedvoltage);
+    FLdrive.setVoltage(RLdriveFFout);
+    FRdrive.setVoltage(FRdriveFFout);
+    RLdrive.setVoltage(RLdriveFFout);
+    RRdrive.setVoltage(RRdriveFFout);
     FLturn.setVoltage((FLturnPIDout / maxmodulevelrads) * maxappliedvoltage);
     FRturn.setVoltage((FRturnPIDout / maxmodulevelrads) * maxappliedvoltage);
     RLturn.setVoltage((RLturnPIDout / maxmodulevelrads) * maxappliedvoltage);
@@ -386,10 +391,10 @@ public class swervedrive extends SubsystemBase {
     SmartDashboard.putNumber("RLturnPIDout", RLturnPIDout);
     SmartDashboard.putNumber("RRturnPIDout", RRturnPIDout);
 
-    SmartDashboard.putNumber("FLdriveFFout", 0);
-    SmartDashboard.putNumber("FRdriveFFout", 0);
-    SmartDashboard.putNumber("RLdriveFFout", 0);
-    SmartDashboard.putNumber("RRdriveFFout", 0);
+    SmartDashboard.putNumber("FLdriveFFout", FLdriveFFout);
+    SmartDashboard.putNumber("FRdriveFFout", FRdriveFFout);
+    SmartDashboard.putNumber("RLdriveFFout", RLdriveFFout);
+    SmartDashboard.putNumber("RRdriveFFout", RRdriveFFout);
 
     SmartDashboard.putNumber("HeadingActual", headingactual);
     SmartDashboard.putNumber("HeadingDesired", headingdes);

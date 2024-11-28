@@ -7,6 +7,5 @@ Correctly calculated constraints for motion profiles and velocity limits.
 Swerve v5.3
 
 Added feedforwards for drive velocity.
-Adding pushing module azimuth off of mainly PID control, 
-moving toward mostly FF control with PID for trim.
+Pushing module azimuth off of mainly PID control, moving toward mostly FF control with PID for trim.
 Adjusted some telemetry in swervemain class.

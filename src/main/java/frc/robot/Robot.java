@@ -65,7 +65,7 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    swervedrive.driveIKinVCL(HIDs.getXboxVelocityData()[0], HIDs.getXboxVelocityData()[1], 0 , HIDs.getXboxVelocityData()[3], false);
+    swervedrive.driveIKinVCL(HIDs.getXboxVelocityData()[0], HIDs.getXboxVelocityData()[1], 0 , HIDs.getXboxVelocityData()[3], true);
     swervedrive.telemetry();
   }
 
