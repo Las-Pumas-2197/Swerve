@@ -11,7 +11,6 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
-import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
@@ -24,35 +23,11 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.PIDSubsystem;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.WIP.xboxmanager;
 import edu.wpi.first.math.MathUtil;
 
 public class swervedrive extends SubsystemBase {
-
-  //construct module actual values
-  private double FLdrivevelactual;
-  private double FLturnposactual;
-  private double FRdrivevelactual;
-  private double FRturnposactual;
-  private double RRdrivevelactual;
-  private double RRturnposactual;
-  private double RLdrivevelactual;
-  private double RLturnposactual;
-
-  //construct module desired values
-  private double FLdriveveldes;
-  private double FLturnposdes;
-  private double FRdriveveldes;
-  private double FRturnposdes;
-  private double RRdriveveldes;
-  private double RRturnposdes;
-  private double RLdriveveldes;
-  private double RLturnposdes;
-
-  //construct heading values
-  private double headingactual;
-  private double headingdes;
 
   //construct motor controller objects
   private final CANSparkFlex FLdrive;
@@ -116,6 +91,31 @@ public class swervedrive extends SubsystemBase {
   private final LinearFilter FRdrivefilter;
   private final LinearFilter RLdrivefilter;
   private final LinearFilter RRdrivefilter;
+  private final LinearFilter headingfilter;
+  
+  //construct module actual values
+  private double FLdrivevelactual;
+  private double FLturnposactual;
+  private double FRdrivevelactual;
+  private double FRturnposactual;
+  private double RRdrivevelactual;
+  private double RRturnposactual;
+  private double RLdrivevelactual;
+  private double RLturnposactual;
+
+  //construct module desired values
+  private double FLdriveveldes;
+  private double FLturnposdes;
+  private double FRdriveveldes;
+  private double FRturnposdes;
+  private double RRdriveveldes;
+  private double RRturnposdes;
+  private double RLdriveveldes;
+  private double RLturnposdes;
+
+  //construct heading values
+  private double headingactual;
+  private double headingdes;
 
   //module PID output values for diagnostics
   private double FLturnPIDout;
@@ -162,7 +162,6 @@ public class swervedrive extends SubsystemBase {
   private static final double turnFFkS = 0.1; //needs measured!!!!! in V
   private static final double turnFFkV = 0.94; //needs measured!!!! in V*rads/s
   private static final double turnFFkA = 0; //needs calculated, V*rads/s^2, zero is probably ok due to low inertia
-  private static final double turntol = 0.05*pi;
 
   //tuning parameters for drive loops and FFs, gains calculated with 50lb robot
   private static final double drivePIDkP = 0.01;
@@ -177,15 +176,14 @@ public class swervedrive extends SubsystemBase {
   private static final double headingFFkS = 0.1; //needs measured!!!!! in V
   private static final double headingFFkV = 5.45; //needs measured!!!!! in V*rads/s
   private static final double headingFFkA = 0; //needs calculated!!!! in V*rads/s^2
-  private static final double headingtol = 0.05*pi;
 
   //drive constraints for motion profile
   private static final double maxmodulevelmps = 5.7; //needs measured!!!!! calculated at 5.7 m/s
   private static final double maxmoduleaclmps = 2.5; //needs measured!!!!!, units m/s^2
 
   //max limits for turn and constraints, constraints must be equal or less than maximum
-  private static final double maxmodulevelrads = 4*pi; //measured, units rads/s
-  private static final double maxmoduleaclrads = 8*pi; //needs measured, units rads/s^2
+  private static final double maxmodulevelrads = 4*pi; //needs measured!!!!! units rads/s
+  private static final double maxmoduleaclrads = 8*pi; //needs measured!!!!! units rads/s^2
   private static final double turnvelconstraint = 4*pi;
   private static final double turnaclconstraint = 4*pi;
 
@@ -208,6 +206,7 @@ public class swervedrive extends SubsystemBase {
   private double Yspeeddes;
   private double Xspeeddes;
   private double Zrotdes;
+  private double Zinput; //used for passing either PIDoutput from heading or from Zrotdes
 
   //initializations for swervedrive
   public swervedrive() {
@@ -311,10 +310,10 @@ public class swervedrive extends SubsystemBase {
     FLturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
     RLturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
     RRturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
+    headingfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
   }
   
-  /** Drive robot with generated states from inverse kinematics in closed loop azimuth control
-   * 
+  /** Operate drivetrain using data from xboxmanager.
    * @param Xspeed
    * @param Yspeed
    * @param Zrot
@@ -323,22 +322,23 @@ public class swervedrive extends SubsystemBase {
    */
   public void drive(double Xspeed, double Yspeed, double Zrot, double HeadingDesired, boolean HeadingCL) {
 
-    //conditionals for heading controller
-    headingdes = MathUtil.angleModulus(HeadingDesired);
-
-    double Zinput;
+    //passing values out of void for telemetry
+    headingdes = HeadingDesired;
+    Xspeeddes = Xspeed;
+    Yspeeddes = Yspeed;
+    Zrotdes = Zrot;
     
+    //CL heading control conditional
     if (HeadingCL) {
       headingPIDout = headingPID.calculate(headingactual, headingdes);
-      Zinput = headingPIDout;
+      headingFFout = headingFF.calculate(headingactual, headingdes, 0.02);
+      //Zinput = headingPIDout + headingFFout;
     } else {
       Zinput = Zrot;
     }
 
     //Chassis Speeds object for IK calcs
-    ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
-      Xspeed, Yspeed, Zinput, new Rotation2d(headingactual)
-    );
+    ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(Xspeed, Yspeed, Zinput, new Rotation2d(headingactual));
     ChassisSpeeds.discretize(speeds, 0.02);
 
     //IK calcs
@@ -352,7 +352,7 @@ public class swervedrive extends SubsystemBase {
     };
 
     //write internal generated states to vars and reduce drive vel by inverse of angle error
-    //may average angle errors for total error and multiply velocity by inverse for less hysteresis
+    //may average angle errors for total error and multiply velocity by inverse for less hysteresis at low bat volts
     FLturnposdes = optimizedstates[0].angle.getRadians();
     FRturnposdes = optimizedstates[1].angle.getRadians();
     RLturnposdes = optimizedstates[2].angle.getRadians();

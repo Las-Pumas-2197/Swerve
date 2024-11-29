@@ -59,7 +59,7 @@ Gains are then set during instantiation and .calculate is called to calculate th
 Calculation of kA is also optional by omitting the kA value in instantiation, which defaults to 0.
 .calculate can also be called with desired and actual velocities to approximate kA.
 The .calculate function will always return an output in Volts.
-This must often be converted to whatever units are desired, but can be directly written
+This must often be converted to whatever units are desired, but can be directly written to a controller.
 -----------------------------------------------------------------------------------------------------
 PID controllers are at their core just math engines.
 They generate an ouput based on the difference between a setpoint and the current state.

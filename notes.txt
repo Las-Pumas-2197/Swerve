@@ -9,4 +9,6 @@ Swerve v5.3
 Added feedforwards for drive velocity and turn.
 Added some calculated feedforward gains. Gains need properly calculated.
 Pushing module azimuth off of mainly PID control, moving toward mostly FF control with PID for trim.
-Adjusted some telemetry in swervemain class.
+Adjusted telemetry in swervemain class to limit information that is posted to shuffleboard.
+Rewrote HIDs class to be less verbose and to pass directly to the swervemain class.
+Need to calculate FF gains.

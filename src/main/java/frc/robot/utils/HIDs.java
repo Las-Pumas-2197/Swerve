@@ -2,7 +2,7 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package frc.robot.driverinputs;
+package frc.robot.utils;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -10,10 +10,12 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
+//depreciated
+
 public class HIDs extends SubsystemBase {
 
   //construct joystick and xbox controller
-  public final Joystick joystick;
+  private final Joystick joystick;
   private final XboxController xbox;
 
   //construct joystick raw data
@@ -96,7 +98,7 @@ public class HIDs extends SubsystemBase {
       (MathUtil.applyDeadband(-xboxY, xboxdeadbandX)*maxspeedmps)*Math.cos(1.3*Math.cbrt(righttrigger)),
       (MathUtil.applyDeadband(-xboxX, xboxdeadbandY)*maxrotspeedrads)*Math.cos(1.3*Math.cbrt(righttrigger)),
       0,
-      headingdesired
+      MathUtil.angleModulus(headingdesired)
     };
   }
 
