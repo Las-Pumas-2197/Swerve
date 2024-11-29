@@ -11,6 +11,7 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
+import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.LinearFilter;
@@ -22,6 +23,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.PIDSubsystem;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.math.MathUtil;
 
@@ -94,62 +96,92 @@ public class swervedrive extends SubsystemBase {
   private final SimpleMotorFeedforward FRdriveFF;
   private final SimpleMotorFeedforward RLdriveFF;
   private final SimpleMotorFeedforward RRdriveFF;
+  private final SimpleMotorFeedforward FLturnFF;
+  private final SimpleMotorFeedforward FRturnFF;
+  private final SimpleMotorFeedforward RLturnFF;
+  private final SimpleMotorFeedforward RRturnFF;
+  private final SimpleMotorFeedforward headingFF;
 
-  //linear filters for encoders
+  //linear filters for PID outputs
   private final LinearFilter FLturnfilter;
   private final LinearFilter FRturnfilter;
   private final LinearFilter RLturnfilter;
   private final LinearFilter RRturnfilter;
 
-  //PID output values for diagnostics
+  //module PID output values for diagnostics
   private double FLturnPIDout;
   private double FRturnPIDout;
   private double RLturnPIDout;
   private double RRturnPIDout;
+
+  //heading PID output value
   private double headingPIDout;
 
-  //FFoutput values for diagnostics
+  //FF output values for diagnostics
   private double FLdriveFFout;
   private double FRdriveFFout;
   private double RLdriveFFout;
   private double RRdriveFFout;
+  private double FLturnFFout;
+  private double FRturnFFout;
+  private double RLturnFFout;
+  private double RRturnFFout;
+
+  //heading FF output
+  private double headingFFout;
 
   //angle error values
   private double FLturnerror;
   private double FRturnerror;
   private double RLturnerror;
   private double RRturnerror;
+
+  //heading angle error value
   private double headingerror;
 
   //trapezoidal constraints for turn PID
   private final TrapezoidProfile.Constraints turnprofile;
   private final TrapezoidProfile.Constraints headingprofile;
 
-  //misc tuning parameters for PID loops, FFs, and other calcs.
-  //FF kV and kA are calculated by ReCalc, kS needs measured. Calced with 50lb robot weight 
-  private static final double turnPIDkP = 1.25;
-  private static final double turnPIDkD = 0.35;
+  //tuning parameters for PID loops and FFs, FFs not implemented yet
+  private static final double turnPIDkP = 0.01; //previously 1.25 in v5.2, tune again
+  private static final double turnPIDkD = 0; //previously 0.35 in v5.2, tune again
+  private static final double turnFFkS = 0.1; //needs measured!!!!! in V
+  private static final double turnFFkV = 0.94; //needs measured!!!! in V*rads/s
+  private static final double turnFFkA = 0; //needs calculated, V*rads/s^2, zero is probably ok due to low inertia
   private static final double turntol = 0.05*pi;
-  private static final double headingPIDkP = 6;
-  private static final double headingPIDkD = 0;
-  private static final double headingtol = 0.05*pi;
-  private static final double driveFFkS = 0.12; //measured, used to model static friction of system
-  private static final double driveFFkV = 2.09; //calculated by ReCalc, V*s/m
-  private static final double driveFFkA = 0.47; //calculated by ReCalc, units of V*s^2/m
 
-  //voltage constraints
-  private static final double maxappliedvoltage = 12.6;
+  //tuning parameters for drive loops and FFs, gains calculated with 50lb robot
+  private static final double driveFFkS = 0.1; //needs measured!!! in V
+  private static final double driveFFkV = 2.09; //needs measured!!! in V*m/s
+  private static final double driveFFkA = 0.24; //needs measured!!! in V*m/s^2
+
+  //tuning parameters for heading, needs adjusted for radians
+  private static final double headingPIDkP = 0.01; //previously 6
+  private static final double headingPIDkD = 0; //previously 0
+  private static final double headingFFkS = 0.1; //needs measured!!!!! in V
+  private static final double headingFFkV = 5.45; //needs measured!!!!! in V*rads/s
+  private static final double headingFFkA = 0; //needs calculated!!!! in V*rads/s^2
+  private static final double headingtol = 0.05*pi;
 
   //drive constraints for motion profile
-  private static final double maxmodulevelmps = 5;
+  private static final double maxmodulevelmps = 5.7; //needs measured!!!!! calculated at 5.7 m/s
+  private static final double maxmoduleaclmps = 2.5; //needs measured!!!!!, units m/s^2
 
-  //turn constraints for motion profile
-  private static final double maxmodulevelrads = 4*pi; //measured
-  private static final double maxmoduleaclrads = 8*pi; //needs measured
+  //max limits for turn and constraints, constraints must be equal or less than maximum
+  private static final double maxmodulevelrads = 4*pi; //measured, units rads/s
+  private static final double maxmoduleaclrads = 8*pi; //needs measured, units rads/s^2
+  private static final double turnvelconstraint = 4*pi;
+  private static final double turnaclconstraint = 2*pi;
 
-  //heading constraints for motion profile
-  private static final double maxheadingvelrads = 2*pi;
-  private static final double maxheadingaclrads = 2*pi;
+  //heading limits and constraints for motion profile
+  private static final double maxheadingvelrads = 2.11*pi; //needs measured!!!!!
+  private static final double maxheadingaclrads = 1*pi; //needs measured!!!!!
+  private static final double headingvelconstraint = 2*pi;
+  private static final double headingaclconstraint = 1*pi;
+
+  //voltage constraints
+  private static final double maxappliedvoltage = 12;
 
   //min and max for pid loops
   private static final double turnPIDoutmin = 0.1;
@@ -157,13 +189,13 @@ public class swervedrive extends SubsystemBase {
   private static final double headingPIDoutmin = 0.2;
   private static final double headingPIDoutmax = 10;
 
-  //conversion factors for velocity
+  //conversion factors for drive
+  private static final double driveposconvfactor = (0.0762*pi / 4.71428); //meters  
   private static final double drivevelconvfactor = (0.0762*pi / 4.71428) / 60; //m/s
-  private static final double turnvelconvfactor = 2*pi; //rads/s
 
-  //conversion factors for position 
-  private static final double driveposconvfactor = (0.0762*pi / 4.71428); //meters
+  //conversion factors for turn
   private static final double turnposconvfactor = 2*pi; //rads
+  private static final double turnvelconvfactor = 2*pi; //rads/s, div by 60 unneeded, encoder in RPS units
 
   //Initializations for desired speeds
   private double Yspeeddes;
@@ -231,10 +263,10 @@ public class swervedrive extends SubsystemBase {
     );
 
     //instantiate trapezoidal profile
-    headingprofile = new TrapezoidProfile.Constraints(maxheadingvelrads, maxheadingaclrads);
-    turnprofile = new TrapezoidProfile.Constraints(maxmodulevelrads, maxmoduleaclrads); //rads/s and rads/s^2
+    headingprofile = new TrapezoidProfile.Constraints(headingvelconstraint, headingaclconstraint);
+    turnprofile = new TrapezoidProfile.Constraints(turnvelconstraint, turnaclconstraint); //rads/s and rads/s^2
 
-    //instantiate PID loops and FFs
+    //instantiate PID loops
     FLturnPID = new ProfiledPIDController(turnPIDkP, 0, turnPIDkD, turnprofile);
     FRturnPID = new ProfiledPIDController(turnPIDkP, 0, turnPIDkD, turnprofile);
     RLturnPID = new ProfiledPIDController(turnPIDkP, 0, turnPIDkD, turnprofile);
@@ -249,12 +281,17 @@ public class swervedrive extends SubsystemBase {
     headingPID.enableContinuousInput(-pi, pi);
 
     //instantiate feed forwards
+    FLturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV, turnFFkA);
+    FRturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV, turnFFkA);
+    RLturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV, turnFFkA);
+    RRturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV, turnFFkA);
     FLdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
     FRdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
     RLdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
     RRdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
+    headingFF = new SimpleMotorFeedforward(headingFFkS, headingFFkV, headingFFkA);
 
-    //linear filter instantiation
+    //linear filter instantiation, may or may not be needed for later versions
     FRturnfilter = LinearFilter.singlePoleIIR(0.2, 0.02);
     FLturnfilter = LinearFilter.singlePoleIIR(0.2, 0.02);
     RLturnfilter = LinearFilter.singlePoleIIR(0.2, 0.02);
@@ -269,7 +306,7 @@ public class swervedrive extends SubsystemBase {
    * @param HeadingDesired
    * @param HeadingCL
    */
-  public void driveIKinVCL(double Xspeed, double Yspeed, double Zrot, double HeadingDesired, boolean HeadingCL) {
+  public void drive(double Xspeed, double Yspeed, double Zrot, double HeadingDesired, boolean HeadingCL) {
 
     //conditionals for heading controller
     headingdes = MathUtil.angleModulus(HeadingDesired);
@@ -319,97 +356,126 @@ public class swervedrive extends SubsystemBase {
     RRdriveveldes = optimizedstates[3].speedMetersPerSecond * Math.cos(RRturnerror);
 
     //PID calculations
+    FLturnPIDout = FLturnfilter.calculate(FLturnPID.calculate(FLturnposactual, FLturnposdes));
+    FRturnPIDout = FRturnfilter.calculate(FRturnPID.calculate(FRturnposactual, FRturnposdes));
+    RLturnPIDout = RLturnfilter.calculate(RLturnPID.calculate(RLturnposactual, RLturnposdes));
+    RRturnPIDout = RRturnfilter.calculate(RRturnPID.calculate(RRturnposactual, RRturnposdes));
     
-    if (FLturnerror < turntol) {
-      FLturnPIDout = 0;
-    } else {
-      double FLturnPIDoutraw = FLturnfilter.calculate(FLturnPID.calculate(FLturnposactual, FLturnposdes));
-      FLturnPIDout = Math.signum(FLturnPIDoutraw)*MathUtil.clamp(Math.abs(FLturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
-    }
-
-    if (FRturnerror < turntol) {
-      FRturnPIDout = 0;
-    } else {
-      double FRturnPIDoutraw = FRturnfilter.calculate(FRturnPID.calculate(FRturnposactual, FRturnposdes));
-      FRturnPIDout = Math.signum(FRturnPIDoutraw)*MathUtil.clamp(Math.abs(FRturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
-    }
-    
-    if (RLturnerror < turntol) {
-      RLturnPIDout = 0;
-    } else {
-      double RLturnPIDoutraw = RLturnfilter.calculate(RLturnPID.calculate(RLturnposactual, RLturnposdes));
-      RLturnPIDout = Math.signum(RLturnPIDoutraw)*MathUtil.clamp(Math.abs(RLturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
-    }
-
-    if (RRturnerror < turntol) {
-      RRturnPIDout = 0;
-    } else {
-      double RRturnPIDoutraw = RRturnfilter.calculate(RRturnPID.calculate(RRturnposactual, RRturnposdes));
-      RRturnPIDout = Math.signum(RRturnPIDoutraw)*MathUtil.clamp(Math.abs(RRturnPIDoutraw), turnPIDoutmin, turnPIDoutmax);
-    }
-    
-    //drive FF calculations, need to check what output value units are and convert appropriately
-    FLdriveFFout = FLdriveFF.calculate(FLdriveveldes);
-    FRdriveFFout = FRdriveFF.calculate(FRdriveveldes);
-    RLdriveFFout = RLdriveFF.calculate(RLdriveveldes);
-    RRdriveFFout = RRdriveFF.calculate(RRdriveveldes);
+    //drive FF calculations, need to check output units and convert as necessary
+    FLturnFFout = FLturnFF.calculate(FLturnposactual, FLturnposdes, 0.02);
+    FRturnFFout = FRturnFF.calculate(FRturnposactual, FLturnposdes, 0.02);
+    RLturnFFout = RLturnFF.calculate(RLturnposactual, FLturnposdes, 0.02);
+    RRturnFFout = RRturnFF.calculate(RRturnposactual, FLturnposdes, 0.02);
+    FLdriveFFout = FLdriveFF.calculate(FLdrivevelactual, FLdriveveldes, 0.02);
+    FRdriveFFout = FRdriveFF.calculate(FRdrivevelactual, FRdriveveldes, 0.02);
+    RLdriveFFout = RLdriveFF.calculate(RLdrivevelactual, RLdriveveldes, 0.02);
+    RRdriveFFout = RRdriveFF.calculate(RRdrivevelactual, RRdriveveldes, 0.02);
 
     //write PID calculations and speeds for drive
-    FLdrive.setVoltage(RLdriveFFout);
-    FRdrive.setVoltage(FRdriveFFout);
-    RLdrive.setVoltage(RLdriveFFout);
-    RRdrive.setVoltage(RRdriveFFout);
-    FLturn.setVoltage((FLturnPIDout / maxmodulevelrads) * maxappliedvoltage);
-    FRturn.setVoltage((FRturnPIDout / maxmodulevelrads) * maxappliedvoltage);
-    RLturn.setVoltage((RLturnPIDout / maxmodulevelrads) * maxappliedvoltage);
-    RRturn.setVoltage((RRturnPIDout / maxmodulevelrads) * maxappliedvoltage);
+    FLdrive.setVoltage(0);
+    FRdrive.setVoltage(0);
+    RLdrive.setVoltage(0);
+    RRdrive.setVoltage(0);
+    FLturn.setVoltage(0);
+    FRturn.setVoltage(0);
+    RLturn.setVoltage(0);
+    RRturn.setVoltage(0);
   }
 
-  public void telemetry() {
-    SmartDashboard.putNumber("FLTurnPosActual", FLturnposactual);
-    SmartDashboard.putNumber("FRTurnPosActual", FRturnposactual);
-    SmartDashboard.putNumber("RLTurnPosActual", RLturnposactual);
-    SmartDashboard.putNumber("RRTurnPosActual", RRturnposactual);
+  /** Telemetry manager in swervemain.
+   * Write true for which values are desired to be written and
+   * monitored.
+   * @param ModulePosValues Writes module positional values.
+   * @param ModuleVelValues Writes module velocity values.
+   * @param ModulePIDValues Writes PID controller outputs.
+   * @param ModuleFFValues Writes FF controller outputs.
+   * @param ModuleErrorValues Writes module and heading postional error values.
+   * @param HeadingValues Writes heading values.
+   * @param SpeedValues Writes input speed values.
+   */
+  public void telemetry(
+    boolean ModulePosValues,
+    boolean ModuleVelValues,
+    boolean ModulePIDValues,
+    boolean ModuleFFValues,
+    boolean ModulePIDFValues,
+    boolean ModuleErrorValues,
+    boolean HeadingValues,
+    boolean SpeedValues
+  ) {
 
-    SmartDashboard.putNumber("FLTurnPosDesired", FLturnposdes);
-    SmartDashboard.putNumber("FRTurnPosDesired", FRturnposdes);
-    SmartDashboard.putNumber("RLTurnPosDesired", RLturnposdes);
-    SmartDashboard.putNumber("RRTurnPosDesired", RRturnposdes);
+    if (ModulePosValues) {
+      SmartDashboard.putNumber("FLTurnPosActual", FLturnposactual);
+      SmartDashboard.putNumber("FRTurnPosActual", FRturnposactual);
+      SmartDashboard.putNumber("RLTurnPosActual", RLturnposactual);
+      SmartDashboard.putNumber("RRTurnPosActual", RRturnposactual);    
+      SmartDashboard.putNumber("FLTurnPosDesired", FLturnposdes);
+      SmartDashboard.putNumber("FRTurnPosDesired", FRturnposdes);
+      SmartDashboard.putNumber("RLTurnPosDesired", RLturnposdes);
+      SmartDashboard.putNumber("RRTurnPosDesired", RRturnposdes);
+    }
 
-    SmartDashboard.putNumber("FLDriveVelActual", FLdrivevelactual);
-    SmartDashboard.putNumber("FRDriveVelActual", FRdrivevelactual);
-    SmartDashboard.putNumber("RLDriveVelActual", RLdrivevelactual);
-    SmartDashboard.putNumber("RRDriveVelActual", RRdrivevelactual);   
+    if (ModuleVelValues) {
+      SmartDashboard.putNumber("FLDriveVelActual", FLdrivevelactual);
+      SmartDashboard.putNumber("FRDriveVelActual", FRdrivevelactual);
+      SmartDashboard.putNumber("RLDriveVelActual", RLdrivevelactual);
+      SmartDashboard.putNumber("RRDriveVelActual", RRdrivevelactual);    
+      SmartDashboard.putNumber("FLDriveVelDesired", FLdriveveldes);
+      SmartDashboard.putNumber("FRDriveVelDesired", FRdriveveldes);
+      SmartDashboard.putNumber("RLDriveVelDesired", RLdriveveldes);
+      SmartDashboard.putNumber("RRDriveVelDesired", RRdriveveldes);
+    }
+
+    if (ModulePIDValues) {
+      SmartDashboard.putNumber("FLturnPIDout", FLturnPIDout);
+      SmartDashboard.putNumber("FRturnPIDout", FRturnPIDout);
+      SmartDashboard.putNumber("RLturnPIDout", RLturnPIDout);
+      SmartDashboard.putNumber("RRturnPIDout", RRturnPIDout);
+    }
+
+    if (ModuleFFValues) {
+      SmartDashboard.putNumber("FLturnFFout", FLturnFFout);
+      SmartDashboard.putNumber("FRturnFFout", FRturnFFout);
+      SmartDashboard.putNumber("RLturnFFout", RLturnFFout);
+      SmartDashboard.putNumber("RRturnFFout", RRturnFFout);    
+      SmartDashboard.putNumber("FLdriveFFout", FLdriveFFout);
+      SmartDashboard.putNumber("FRdriveFFout", FRdriveFFout);
+      SmartDashboard.putNumber("RLdriveFFout", RLdriveFFout);
+      SmartDashboard.putNumber("RRdriveFFout", RRdriveFFout);
+    }
     
-    SmartDashboard.putNumber("FLDriveVelDesired", FLdriveveldes);
-    SmartDashboard.putNumber("FRDriveVelDesired", FRdriveveldes);
-    SmartDashboard.putNumber("RLDriveVelDesired", RLdriveveldes);
-    SmartDashboard.putNumber("RRDriveVelDesired", RRdriveveldes);
+    if (ModulePIDFValues) {
+            SmartDashboard.putNumber("FLturnPIDFFout", FLturnPIDout + FLturnFFout);
+    }
 
-    SmartDashboard.putNumber("FLturnPIDout", FLturnPIDout);
-    SmartDashboard.putNumber("FRturnPIDout", FRturnPIDout);
-    SmartDashboard.putNumber("RLturnPIDout", RLturnPIDout);
-    SmartDashboard.putNumber("RRturnPIDout", RRturnPIDout);
+    if (ModuleErrorValues) {
+      SmartDashboard.putNumber("FLturnerror", FLturnerror);
+      SmartDashboard.putNumber("FRturnerror", FRturnerror);
+      SmartDashboard.putNumber("RLturnerror", RLturnerror);
+      SmartDashboard.putNumber("RRturnerror", RRturnerror);
+    }
 
-    SmartDashboard.putNumber("FLdriveFFout", FLdriveFFout);
-    SmartDashboard.putNumber("FRdriveFFout", FRdriveFFout);
-    SmartDashboard.putNumber("RLdriveFFout", RLdriveFFout);
-    SmartDashboard.putNumber("RRdriveFFout", RRdriveFFout);
+    if (HeadingValues) {
+      SmartDashboard.putNumber("HeadingActual", headingactual);
+      SmartDashboard.putNumber("HeadingDesired", headingdes);
+      SmartDashboard.putNumber("HeadingFFout", headingFFout);
+      SmartDashboard.putNumber("HeadingPIDout", headingPIDout);
+      SmartDashboard.putNumber("HeadingError", headingerror);
+    }
 
-    SmartDashboard.putNumber("HeadingActual", headingactual);
-    SmartDashboard.putNumber("HeadingDesired", headingdes);
+    if (SpeedValues) {
+      SmartDashboard.putNumber("Yspeeddes", Yspeeddes);
+      SmartDashboard.putNumber("Zrotspeeddes", Zrotdes);
+      SmartDashboard.putNumber("Xspeeddes", Xspeeddes);
+    }
 
-    SmartDashboard.putNumber("HeadingDesired", headingdes);
-    SmartDashboard.putNumber("Yspeeddes", Yspeeddes);
-    SmartDashboard.putNumber("Zrotspeeddes", Zrotdes);
-    SmartDashboard.putNumber("Xspeeddes", Xspeeddes);
-    SmartDashboard.putNumber("HeadingPIDout", headingPIDout);
 
-    SmartDashboard.putNumber("FLturnerror", FLturnerror);
-    SmartDashboard.putNumber("FRturnerror", FRturnerror);
-    SmartDashboard.putNumber("RLturnerror", RLturnerror);
-    SmartDashboard.putNumber("RRturnerror", RRturnerror);
-    SmartDashboard.putNumber("Headingerror", headingerror);
+
+
+
+
+
+
   }
 
   @Override

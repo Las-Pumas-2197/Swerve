@@ -1,0 +1,71 @@
+NOTES ON CALCULATING FEED FEEDFORWARD AND PID GAINS
+-----------------------------------------------------------------------------------------------------
+Feedforwards are used to better model the response and physical limits of a mechanism.
+They basically can predict the physical response of a mechanism using only the input.
+Typically used for the bulk of the output and PID is used to trim.
+
+"kS" Gain
+kS is used to model static friction in a system. kS units are in volts.
+kS is also described as the minimum voltage to begin movement due to friction.
+kS is calculated by applying the largest voltage possible without incurring movement.
+Also called "V-intercept" in some motor modeling papers.
+
+"kV" Gain
+kV is the relationship between voltage and velocity. kV units are in volts/second * units.
+With units of meters, can be expressed as volts per m/s.
+With units of radians, can be expressed as volts per rad/s.
+For a specific voltage, it should generate a specific speed.
+kV can be calculated mutiple ways, but two are listed below:
+Create a very slow voltage ramp and plot voltage on the Y axis and velocity on the X axis.
+The Y-intercept of the line will be kS. kV will be the compliment of the slope of the line generated.
+OR
+Write a known voltage to the system and observe the steady-state velocity.
+Plug voltage, kS, and velocity into the equation kV = (Vapp - kS) / vel. Result is the kV.
+Example with 12v applied and 0.5 kS, with resultant velocity of 5m/s.
+kV = (12 - 0.5) / 5 = 2.3 V per m/s.
+This is single-order so may not be entirely accurate, particularly at higher RPM due to counter-EMF.
+Multiple measurements can be taken and averaged for more accuracy.
+This testing must be performed UNDER LOAD. Cannot be accurately done when no load is applied.
+Meters per second can then be calculated from the applied volts. Using above example for calcs and 10 applied volts.
+vel = Vapp / kV
+vel = 10 / 2.3 = 4.348
+10 applied volts to the motor should net around 4.348 m/s with the given kV.
+
+"kA" Gain
+kA is the relationship between voltage and acceleration.
+For an applied voltage at zero volts, a resultant acceleration occurs over a specific time scale.
+kA is often expressed as volts per unit/second^2.
+For units of meters, expressed as volts per m/s^2.
+For units of meters, expressed as radians per rad/s^2.
+Applied voltages during these tests are often quite low.
+High applied voltages during these tests may induce wheel slippage which skews the test results.
+
+Firstly, a known voltage must be applied to the mechanism, and the resulting acceleration calculated.
+acl = deltaV / deltaT is the accepted way to calculate accleration in most cases.
+Since velocity increases hyperbolically with brushless motors, secant or regression lines are used for approximation.
+The measurement period can also be sliced and the resultant acceleration values from each slice averaged.
+Note that the first 100 - 250ms of accleration is often discarded due to the inductive nature of motors.
+The initial inductive load of the magnetic field charging up causes a slow ramp up until charged.
+Velocity then increases as normal after the field is saturated.
+This time scale must be observed and the preceding data discarded for more accuracy.
+Acceleration measurements must be taken at multiple voltages.
+These differing values must be then be plotted, and a regression line generated due to noise.
+The kA value is then the reciprocal of the slope of the generated regression line.
+Once kA is calculated, kA can be used to estimate the resultant acceleration from an applied voltage.
+Example of 9.5v applied volts, and a kA of 2.45 volts per rads/s^2.
+acl = 9.5 / 2.45 = 3.877 rads/s^2.
+
+Gains are then set during instantiation and .calculate is called to calculate the output.
+Calculation of kA is also optional by omitting the kA value in instantiation, which defaults to 0.
+.calculate can also be called with desired and actual velocities to approximate kA.
+The .calculate function will always return an output in Volts.
+This must often be converted to whatever units are desired, but can be directly written
+-----------------------------------------------------------------------------------------------------
+PID controllers are at their core just math engines.
+They generate an ouput based on the difference between a setpoint and the current state.
+They have no consideration for the physical limits of the mechanism.
+PID controllers also are often resource intensive and are too slow to accurately control things precisely on their own.
+Typically are used in conjuction with feed forwards to trim towards the setpoint more reliably.
+
+The P is the proportional gain.
+Proportional is purely just a multiplier for the difference between the passed setpoint and the actual.
