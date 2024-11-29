@@ -12,6 +12,7 @@ import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
 import edu.wpi.first.math.controller.ArmFeedforward;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.LinearFilter;
@@ -85,6 +86,10 @@ public class swervedrive extends SubsystemBase {
   private final SwerveDriveKinematics kinematics;
 
   //PID loop construction
+  private final PIDController FLdrivePID;
+  private final PIDController FRdrivePID;
+  private final PIDController RLdrivePID;
+  private final PIDController RRdrivePID;
   private final ProfiledPIDController FLturnPID;
   private final ProfiledPIDController FRturnPID;
   private final ProfiledPIDController RLturnPID;
@@ -107,12 +112,20 @@ public class swervedrive extends SubsystemBase {
   private final LinearFilter FRturnfilter;
   private final LinearFilter RLturnfilter;
   private final LinearFilter RRturnfilter;
+  private final LinearFilter FLdrivefilter;
+  private final LinearFilter FRdrivefilter;
+  private final LinearFilter RLdrivefilter;
+  private final LinearFilter RRdrivefilter;
 
   //module PID output values for diagnostics
   private double FLturnPIDout;
   private double FRturnPIDout;
   private double RLturnPIDout;
   private double RRturnPIDout;
+  private double FLdrivePIDout;
+  private double FRdrivePIDout;
+  private double RLdrivePIDout;
+  private double RRdrivePIDout;
 
   //heading PID output value
   private double headingPIDout;
@@ -152,6 +165,8 @@ public class swervedrive extends SubsystemBase {
   private static final double turntol = 0.05*pi;
 
   //tuning parameters for drive loops and FFs, gains calculated with 50lb robot
+  private static final double drivePIDkP = 0.01;
+  private static final double drivePIDkD = 0;
   private static final double driveFFkS = 0.1; //needs measured!!! in V
   private static final double driveFFkV = 2.09; //needs measured!!! in V*m/s
   private static final double driveFFkA = 0.24; //needs measured!!! in V*m/s^2
@@ -172,7 +187,7 @@ public class swervedrive extends SubsystemBase {
   private static final double maxmodulevelrads = 4*pi; //measured, units rads/s
   private static final double maxmoduleaclrads = 8*pi; //needs measured, units rads/s^2
   private static final double turnvelconstraint = 4*pi;
-  private static final double turnaclconstraint = 2*pi;
+  private static final double turnaclconstraint = 4*pi;
 
   //heading limits and constraints for motion profile
   private static final double maxheadingvelrads = 2.11*pi; //needs measured!!!!!
@@ -183,17 +198,9 @@ public class swervedrive extends SubsystemBase {
   //voltage constraints
   private static final double maxappliedvoltage = 12;
 
-  //min and max for pid loops
-  private static final double turnPIDoutmin = 0.1;
-  private static final double turnPIDoutmax = 10;
-  private static final double headingPIDoutmin = 0.2;
-  private static final double headingPIDoutmax = 10;
-
-  //conversion factors for drive
+  //conversion factors for drive and turn
   private static final double driveposconvfactor = (0.0762*pi / 4.71428); //meters  
   private static final double drivevelconvfactor = (0.0762*pi / 4.71428) / 60; //m/s
-
-  //conversion factors for turn
   private static final double turnposconvfactor = 2*pi; //rads
   private static final double turnvelconvfactor = 2*pi; //rads/s, div by 60 unneeded, encoder in RPS units
 
@@ -267,6 +274,10 @@ public class swervedrive extends SubsystemBase {
     turnprofile = new TrapezoidProfile.Constraints(turnvelconstraint, turnaclconstraint); //rads/s and rads/s^2
 
     //instantiate PID loops
+    FLdrivePID = new PIDController(drivePIDkP, 0, drivePIDkD);
+    FRdrivePID = new PIDController(drivePIDkP, 0, drivePIDkD);
+    RLdrivePID = new PIDController(drivePIDkP, 0, drivePIDkD);
+    RRdrivePID = new PIDController(drivePIDkP, 0, drivePIDkD);
     FLturnPID = new ProfiledPIDController(turnPIDkP, 0, turnPIDkD, turnprofile);
     FRturnPID = new ProfiledPIDController(turnPIDkP, 0, turnPIDkD, turnprofile);
     RLturnPID = new ProfiledPIDController(turnPIDkP, 0, turnPIDkD, turnprofile);
@@ -292,10 +303,14 @@ public class swervedrive extends SubsystemBase {
     headingFF = new SimpleMotorFeedforward(headingFFkS, headingFFkV, headingFFkA);
 
     //linear filter instantiation, may or may not be needed for later versions
-    FRturnfilter = LinearFilter.singlePoleIIR(0.2, 0.02);
-    FLturnfilter = LinearFilter.singlePoleIIR(0.2, 0.02);
-    RLturnfilter = LinearFilter.singlePoleIIR(0.2, 0.02);
-    RRturnfilter = LinearFilter.singlePoleIIR(0.2, 0.02);
+    FLdrivefilter = LinearFilter.singlePoleIIR(0.1, 0.02);
+    FRdrivefilter = LinearFilter.singlePoleIIR(0.1, 0.02);
+    RLdrivefilter = LinearFilter.singlePoleIIR(0.1, 0.02);
+    RRdrivefilter = LinearFilter.singlePoleIIR(0.1, 0.02);
+    FRturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
+    FLturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
+    RLturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
+    RRturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
   }
   
   /** Drive robot with generated states from inverse kinematics in closed loop azimuth control
@@ -314,15 +329,7 @@ public class swervedrive extends SubsystemBase {
     double Zinput;
     
     if (HeadingCL) {
-      if (headingerror < headingtol) {
-        headingPIDout = 0;
-      } else {
-        double headingPIDoutraw = headingPID.calculate(headingactual, headingdes);
-        headingPIDout = 
-          Math.signum(headingPIDoutraw)*MathUtil.clamp(
-            Math.abs(headingPIDoutraw), headingPIDoutmin, headingPIDoutmax
-          );
-      }
+      headingPIDout = headingPID.calculate(headingactual, headingdes);
       Zinput = headingPIDout;
     } else {
       Zinput = Zrot;
@@ -355,7 +362,12 @@ public class swervedrive extends SubsystemBase {
     RLdriveveldes = optimizedstates[2].speedMetersPerSecond * Math.cos(RLturnerror);
     RRdriveveldes = optimizedstates[3].speedMetersPerSecond * Math.cos(RRturnerror);
 
-    //PID calculations
+    //calculate PIDs and filter,
+    //units of rads for turn, units of m/s for drive
+    FLdrivePIDout = FLdrivefilter.calculate(FLdrivePID.calculate(FLdrivevelactual, FLdriveveldes));
+    FRdrivePIDout = FRdrivefilter.calculate(FRdrivePID.calculate(FRdrivevelactual, FRdriveveldes));
+    RLdrivePIDout = RLdrivefilter.calculate(RLdrivePID.calculate(RLdrivevelactual, RLdriveveldes));
+    RRdrivePIDout = RRdrivefilter.calculate(RRdrivePID.calculate(RRdrivevelactual, RRdriveveldes));
     FLturnPIDout = FLturnfilter.calculate(FLturnPID.calculate(FLturnposactual, FLturnposdes));
     FRturnPIDout = FRturnfilter.calculate(FRturnPID.calculate(FRturnposactual, FRturnposdes));
     RLturnPIDout = RLturnfilter.calculate(RLturnPID.calculate(RLturnposactual, RLturnposdes));
@@ -427,6 +439,10 @@ public class swervedrive extends SubsystemBase {
     }
 
     if (ModulePIDValues) {
+      SmartDashboard.putNumber("FLdrivePIDout", FLdrivePIDout);
+      SmartDashboard.putNumber("FRdrivePIDout", FRdrivePIDout);
+      SmartDashboard.putNumber("RLdrivePIDout", RLdrivePIDout);
+      SmartDashboard.putNumber("RRdrivePIDout", RRdrivePIDout);
       SmartDashboard.putNumber("FLturnPIDout", FLturnPIDout);
       SmartDashboard.putNumber("FRturnPIDout", FRturnPIDout);
       SmartDashboard.putNumber("RLturnPIDout", RLturnPIDout);
@@ -445,7 +461,14 @@ public class swervedrive extends SubsystemBase {
     }
     
     if (ModulePIDFValues) {
-            SmartDashboard.putNumber("FLturnPIDFFout", FLturnPIDout + FLturnFFout);
+      SmartDashboard.putNumber("FLturnPIDFFout", FLturnPIDout + FLturnFFout);
+      SmartDashboard.putNumber("FRturnPIDFFout", FRturnPIDout + FRturnFFout);
+      SmartDashboard.putNumber("RLturnPIDFFout", RLturnPIDout + RLturnFFout);
+      SmartDashboard.putNumber("RRturnPIDFFout", RRturnPIDout + RRturnFFout);
+      SmartDashboard.putNumber("FLdrivePIDFFout", FLdrivePIDout + FLdriveFFout);
+      SmartDashboard.putNumber("FRdrivePIDFFout", FRdrivePIDout + FRdriveFFout);
+      SmartDashboard.putNumber("RLdrivePIDFFout", RLdrivePIDout + RLdriveFFout);
+      SmartDashboard.putNumber("RRdrivePIDFFout", RRdrivePIDout + RRdriveFFout);
     }
 
     if (ModuleErrorValues) {

@@ -72,6 +72,7 @@ public class Robot extends TimedRobot {
       true,
       true,
       true,
+      true,
       false,
       false
       );
