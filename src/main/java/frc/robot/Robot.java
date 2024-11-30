@@ -7,7 +7,6 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.WIP.xboxmanager;
 import frc.robot.drivetrain.swervedrive;
 import frc.robot.utils.HIDs;
 public class Robot extends TimedRobot {
@@ -17,7 +16,6 @@ public class Robot extends TimedRobot {
 
   //swervedrive stuff
   private final swervedrive swervedrive = new swervedrive();
-  private final xboxmanager xbox = new xboxmanager(0);
 
   //telemetry object for writing data to dashboard
 
