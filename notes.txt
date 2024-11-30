@@ -12,3 +12,20 @@ Pushing module azimuth off of mainly PID control, moving toward mostly FF contro
 Adjusted telemetry in swervemain class to limit information that is posted to shuffleboard.
 Rewrote HIDs class to be less verbose and to pass directly to the swervemain class.
 Need to calculate FF gains.
+
+Constants that need measured:
+turnFFkS, module azimuth kS
+turnFFkV, module azumuth kV
+turnFFkA, module azimuth kA
+driveFFkS, module drive kS
+driveFFkV, module drive kV
+driveFFkA, module drive kA
+headingFFkS, heading kS
+headingFFkV, heading kV
+headingFFkA, heading kA
+modulemaxvelmps, max acheivable linear velocity of module
+modulemaxaclmps, max acheivable linear acceleration of module
+modulemaxvelrads, max acheivable rotational velocity of module
+modulemaxaclrads, max acheivable rotational acceleration of module
+headingmaxvelrads, max acheivable rotational velocity of entire robot
+headingmaxaclrads, max acheivable rotational accleration of entire robot

@@ -14,7 +14,6 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -80,17 +79,6 @@ public class swervedrive extends SubsystemBase {
   private final SimpleMotorFeedforward RLturnFF;
   private final SimpleMotorFeedforward RRturnFF;
   private final SimpleMotorFeedforward headingFF;
-
-  //linear filters for PID outputs
-  private final LinearFilter FLturnfilter;
-  private final LinearFilter FRturnfilter;
-  private final LinearFilter RLturnfilter;
-  private final LinearFilter RRturnfilter;
-  private final LinearFilter FLdrivefilter;
-  private final LinearFilter FRdrivefilter;
-  private final LinearFilter RLdrivefilter;
-  private final LinearFilter RRdrivefilter;
-  private final LinearFilter headingfilter;
   
   //construct module actual values
   private double FLdrivevelactual;
@@ -152,6 +140,7 @@ public class swervedrive extends SubsystemBase {
   private double headingerror;
 
   //trapezoidal constraints for turn PID
+  private final TrapezoidProfile.Constraints driveprofile;
   private final TrapezoidProfile.Constraints turnprofile;
   private final TrapezoidProfile.Constraints headingprofile;
 
@@ -160,9 +149,9 @@ public class swervedrive extends SubsystemBase {
   private static final double turnPIDkD = 0; //previously 0.35 in v5.2, tune again
   private static final double turnFFkS = 0.1; //needs measured!!!!! in V
   private static final double turnFFkV = 0.94; //needs measured!!!! in V*rads/s
-  private static final double turnFFkA = 0; //needs calculated, V*rads/s^2, zero is probably ok due to low inertia
+  private static final double turnFFkA = 0.1; //needs calculated, V*rads/s^2, zero is probably ok due to low inertia
 
-  //tuning parameters for drive loops and FFs, gains calculated with 50lb robot
+  //tuning parameters for drive loops and FFs
   private static final double drivePIDkP = 0.01; 
   private static final double drivePIDkD = 0;
   private static final double driveFFkS = 0.1; //needs measured!!! in V
@@ -174,11 +163,13 @@ public class swervedrive extends SubsystemBase {
   private static final double headingPIDkD = 0; //previously 0
   private static final double headingFFkS = 0.1; //needs measured!!!!! in V
   private static final double headingFFkV = 5.45; //needs measured!!!!! in V*rads/s
-  private static final double headingFFkA = 0; //needs calculated!!!! in V*rads/s^2
+  private static final double headingFFkA = 0.1; //needs calculated!!!! in V*rads/s^2
 
   //drive constraints for motion profile
   private static final double maxmodulevelmps = 5.7; //needs measured!!!!! calculated at 5.7 m/s
   private static final double maxmoduleaclmps = 2.5; //needs measured!!!!!, units m/s^2
+  private static final double drivevelconstraint = 5.7;
+  private static final double driveaclconstraint = 2.5;
 
   //max limits for turn and constraints, constraints must be equal or less than maximum
   private static final double maxmodulevelrads = 4*pi; //needs measured!!!!! units rads/s
@@ -192,7 +183,7 @@ public class swervedrive extends SubsystemBase {
   private static final double headingvelconstraint = 2*pi;
   private static final double headingaclconstraint = 1*pi;
 
-  //voltage constraints
+  //voltage constraints, 12 is used for consistency 
   private static final double maxappliedvoltage = 12;
 
   //conversion factors for drive and turn
@@ -267,9 +258,10 @@ public class swervedrive extends SubsystemBase {
       new Translation2d(-wheelbase/2, -trackwidth/2)
     );
 
-    //instantiate trapezoidal profile
-    headingprofile = new TrapezoidProfile.Constraints(headingvelconstraint, headingaclconstraint);
-    turnprofile = new TrapezoidProfile.Constraints(turnvelconstraint, turnaclconstraint); //rads/s and rads/s^2
+    //instantiate trapezoidal profile, drive in m/s and m/s^2, heading/turn in rads/s and rads/s^2
+    driveprofile = new TrapezoidProfile.Constraints(drivevelconstraint, driveaclconstraint);
+    turnprofile = new TrapezoidProfile.Constraints(turnvelconstraint, turnaclconstraint);
+    headingprofile = new TrapezoidProfile.Constraints(headingvelconstraint, headingaclconstraint);  
 
     //instantiate PID loops
     FLdrivePID = new PIDController(drivePIDkP, 0, drivePIDkD);
@@ -299,25 +291,14 @@ public class swervedrive extends SubsystemBase {
     RLdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
     RRdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
     headingFF = new SimpleMotorFeedforward(headingFFkS, headingFFkV, headingFFkA);
-
-    //linear filter instantiation, may or may not be needed for later versions
-    FLdrivefilter = LinearFilter.singlePoleIIR(0.1, 0.02);
-    FRdrivefilter = LinearFilter.singlePoleIIR(0.1, 0.02);
-    RLdrivefilter = LinearFilter.singlePoleIIR(0.1, 0.02);
-    RRdrivefilter = LinearFilter.singlePoleIIR(0.1, 0.02);
-    FRturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
-    FLturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
-    RLturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
-    RRturnfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
-    headingfilter = LinearFilter.singlePoleIIR(0.1, 0.02);
   }
   
   /** Operate drivetrain using speeds.
    * @param Xspeed Linear X speed in m/s.
    * @param Yspeed Linear Y speed in m/s.
    * @param Zrot Rotational Z speed in rads/s.
-   * @param HeadingDesired Desired heading in rads. Wrapped -pi to pi.
-   * @param HeadingCL To operate with heading in CL or robot-oriented.
+   * @param HeadingDesired Desired heading in rads. Must be wrapped -pi to pi.
+   * @param HeadingCL To operate with heading in CL or OL.
    */
   public void drive(
     double Xspeed,
