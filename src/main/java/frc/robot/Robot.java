@@ -8,7 +8,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.drivetrain.swervedrive;
-import frc.robot.utils.HIDs;
+import frc.robot.utils.drivercontrols;
 public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
@@ -16,6 +16,7 @@ public class Robot extends TimedRobot {
 
   //swervedrive stuff
   private final swervedrive swervedrive = new swervedrive();
+  private final drivercontrols dcontrols = new drivercontrols(0);
 
   //telemetry object for writing data to dashboard
 
@@ -62,17 +63,15 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    swervedrive.drive(0, 0, 0 , 0, true);
-    swervedrive.telemetry(
-      false,
-      false,
-      true,
-      true,
-      true,
-      true,
-      false,
-      false
-      );
+
+    double[] velocities = dcontrols.velocities(5, 2*Math.PI);
+    swervedrive.drive(
+      velocities[0], 
+      velocities[1], 
+      velocities[2], 
+      dcontrols.heading(), 
+      dcontrols.buttons()[0]);
+    swervedrive.telemetry();
   }
 
   @Override
