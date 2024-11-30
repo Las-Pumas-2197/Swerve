@@ -12,6 +12,9 @@ Pushing module azimuth off of mainly PID control, moving toward mostly FF contro
 Adjusted telemetry in swervemain class to limit information that is posted to shuffleboard.
 Rewrote HIDs class to be less verbose and to pass directly to the swervemain class.
 Need to calculate FF gains.
+Delays in absolute encoder readings may be contributing some hysteresis.
+Implementation of FFs may help by reducing dependence on feedback controller (PIDs), and increase system performance.
+Moving PID and FF calculation to spark maxes may be neccesary in v6 to improve performance.
 
 Constants that need measured:
 turnFFkS, module azimuth kS
@@ -29,3 +32,5 @@ modulemaxvelrads, max acheivable rotational velocity of module
 modulemaxaclrads, max acheivable rotational acceleration of module
 headingmaxvelrads, max acheivable rotational velocity of entire robot
 headingmaxaclrads, max acheivable rotational accleration of entire robot
+
+possibly develop swerveID to assist with calculating values?
