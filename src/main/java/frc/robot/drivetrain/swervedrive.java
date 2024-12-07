@@ -148,22 +148,22 @@ public class swervedrive extends SubsystemBase {
   private static final double turnPIDkP = 0.01; //previously 1.25 in v5.2, tune again
   private static final double turnPIDkD = 0; //previously 0.35 in v5.2, tune again
   private static final double turnFFkS = 0.1; //needs measured!!!!! in V
-  private static final double turnFFkV = 0.94; //needs measured!!!! in V*rads/s
-  private static final double turnFFkA = 0.1; //needs calculated, V*rads/s^2, zero is probably ok due to low inertia
+  private static final double turnFFkV = 0.94; //needs measured!!!! in V/rads/s
+  private static final double turnFFkA = 0.1; //needs measured!!!!, V/rads/s^2, omission is probably ok due to low inertia
 
   //tuning parameters for drive loops and FFs
   private static final double drivePIDkP = 0.01; 
   private static final double drivePIDkD = 0;
   private static final double driveFFkS = 0.1; //needs measured!!! in V
-  private static final double driveFFkV = 2.09; //needs measured!!! in V*m/s
-  private static final double driveFFkA = 0.24; //needs measured!!! in V*m/s^2
+  private static final double driveFFkV = 2.09; //needs measured!!! in V/m/s
+  private static final double driveFFkA = 0.24; //needs measured!!! in V/m/s^2
 
   //tuning parameters for heading, needs adjusted for radians
   private static final double headingPIDkP = 0.01; //previously 6
   private static final double headingPIDkD = 0; //previously 0
   private static final double headingFFkS = 0.1; //needs measured!!!!! in V
-  private static final double headingFFkV = 5.45; //needs measured!!!!! in V*rads/s
-  private static final double headingFFkA = 0.1; //needs calculated!!!! in V*rads/s^2
+  private static final double headingFFkV = 5.45; //needs measured!!!!! in V/rads/s
+  private static final double headingFFkA = 0.1; //needs calculated!!!! in V/rads/s^2
 
   //drive constraints for motion profile
   private static final double maxmodulevelmps = 5.7; //needs measured!!!!! calculated at 5.7 m/s
@@ -174,16 +174,16 @@ public class swervedrive extends SubsystemBase {
   //max limits for turn and constraints, constraints must be equal or less than maximum
   private static final double maxmodulevelrads = 4*pi; //needs measured!!!!! units rads/s
   private static final double maxmoduleaclrads = 8*pi; //needs measured!!!!! units rads/s^2
-  private static final double turnvelconstraint = 4*pi;
-  private static final double turnaclconstraint = 8*pi;
+  private static final double turnvelconstraint = 4*pi; //based off max
+  private static final double turnaclconstraint = 8*pi; 
 
   //heading limits and constraints for motion profile
   private static final double maxheadingvelrads = 2.11*pi; //needs measured!!!!!
   private static final double maxheadingaclrads = 1*pi; //needs measured!!!!!
-  private static final double headingvelconstraint = 2*pi;
+  private static final double headingvelconstraint = 2*pi; //based off max
   private static final double headingaclconstraint = 1*pi;
 
-  //voltage constraints, 12 is used for consistency 
+  //voltage constraints, 12 is used for consistency and compensation for battery volt sag
   private static final double maxappliedvoltage = 12;
 
   //conversion factors for drive and turn
@@ -281,16 +281,16 @@ public class swervedrive extends SubsystemBase {
     RRturnPID.enableContinuousInput(-pi, pi);
     headingPID.enableContinuousInput(-pi, pi);
 
-    //instantiate feed forwards
-    FLturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV, turnFFkA);
-    FRturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV, turnFFkA);
-    RLturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV, turnFFkA);
-    RRturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV, turnFFkA);
+    //instantiate feed forwards, kA for turn omitted due to low inertia, may add later
+    FLturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV);
+    FRturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV);
+    RLturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV);
+    RRturnFF = new SimpleMotorFeedforward(turnFFkS, turnFFkV);
     FLdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
     FRdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
     RLdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
     RRdriveFF = new SimpleMotorFeedforward(driveFFkS, driveFFkV, driveFFkA);
-    headingFF = new SimpleMotorFeedforward(headingFFkS, headingFFkV, headingFFkA);
+    headingFF = new SimpleMotorFeedforward(headingFFkS, headingFFkV, headingFFkA); //kA needed due to high rot intertia
   }
   
   /** Operate drivetrain using speeds.
@@ -316,12 +316,24 @@ public class swervedrive extends SubsystemBase {
     
     //CL heading control conditional
     if (HeadingCL) {
+      headingFFout = headingFF.calculate(headingerror);      
       headingPIDout = headingPID.calculate(headingactual, headingdes);
-      headingFFout = headingFF.calculate(headingactual, headingdes, 0.02);
       //Zinput = headingPIDout + headingFFout;
     } else {
       Zinput = Zrotdes;
     }
+
+    //angle error calcs, trig is resource heavy so may need optimization if loop overrun occurs
+    double FLturnerrorraw = FLturnposactual - FLturnposdes;
+    double FRturnerrorraw = FRturnposactual - FRturnposdes;
+    double RLturnerrorraw = RLturnposactual - RLturnposdes;
+    double RRturnerrorraw = RRturnposactual - RRturnposdes;
+    double headingerrorraw = headingactual - headingdes;
+    FLturnerror = Math.atan2(Math.sin(FLturnerrorraw), Math.cos(FLturnerrorraw));
+    FRturnerror = Math.atan2(Math.sin(FRturnerrorraw), Math.cos(FRturnerrorraw));
+    RLturnerror = Math.atan2(Math.sin(RLturnerrorraw), Math.cos(RLturnerrorraw));
+    RRturnerror = Math.atan2(Math.sin(RRturnerrorraw), Math.cos(RRturnerrorraw));
+    headingerror = Math.atan2(Math.sin(headingerrorraw), Math.cos(headingerrorraw));
 
     //Chassis Speeds object for IK calcs
     ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
@@ -355,27 +367,27 @@ public class swervedrive extends SubsystemBase {
     RLdriveveldes = optimizedstates[2].speedMetersPerSecond * Math.cos(RLturnerror);
     RRdriveveldes = optimizedstates[3].speedMetersPerSecond * Math.cos(RRturnerror);
 
-    //calculate PIDs, units of rads for turn, units of m/s for drive
-    FLdrivePIDout = FLdrivePID.calculate(FLdrivevelactual, FLdriveveldes);
-    FRdrivePIDout = FRdrivePID.calculate(FRdrivevelactual, FRdriveveldes);
-    RLdrivePIDout = RLdrivePID.calculate(RLdrivevelactual, RLdriveveldes);
-    RRdrivePIDout = RRdrivePID.calculate(RRdrivevelactual, RRdriveveldes);
-    FLturnPIDout = FLturnPID.calculate(FLturnposactual, FLturnposdes);
-    FRturnPIDout = FRturnPID.calculate(FRturnposactual, FRturnposdes);
-    RLturnPIDout = RLturnPID.calculate(RLturnposactual, RLturnposdes);
-    RRturnPIDout = RRturnPID.calculate(RRturnposactual, RRturnposdes);
-    
-    //drive FF calculations, need to check output units and convert as necessary
-    FLturnFFout = FLturnFF.calculate(FLturnposactual, FLturnposdes, 0.02);
-    FRturnFFout = FRturnFF.calculate(FRturnposactual, FLturnposdes, 0.02);
-    RLturnFFout = RLturnFF.calculate(RLturnposactual, FLturnposdes, 0.02);
-    RRturnFFout = RRturnFF.calculate(RRturnposactual, FLturnposdes, 0.02);
-    FLdriveFFout = FLdriveFF.calculate(FLdrivevelactual, FLdriveveldes, 0.02);
-    FRdriveFFout = FRdriveFF.calculate(FRdrivevelactual, FRdriveveldes, 0.02);
-    RLdriveFFout = RLdriveFF.calculate(RLdrivevelactual, RLdriveveldes, 0.02);
-    RRdriveFFout = RRdriveFF.calculate(RRdrivevelactual, RRdriveveldes, 0.02);
+    //calculate PIDs, units of rads for turn, units of m/s for drive, converted to volts
+    FLturnPIDout = (FLturnPID.calculate(FLturnposactual, FLturnposdes) / 2*pi) * maxappliedvoltage;
+    FRturnPIDout = (FRturnPID.calculate(FRturnposactual, FRturnposdes) / 2*pi) * maxappliedvoltage;
+    RLturnPIDout = (RLturnPID.calculate(RLturnposactual, RLturnposdes) / 2*pi) * maxappliedvoltage;
+    RRturnPIDout = (RRturnPID.calculate(RRturnposactual, RRturnposdes) / 2*pi) * maxappliedvoltage;
+    FLdrivePIDout = (FLdrivePID.calculate(FLdrivevelactual, FLdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
+    FRdrivePIDout = (FRdrivePID.calculate(FRdrivevelactual, FRdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
+    RLdrivePIDout = (RLdrivePID.calculate(RLdrivevelactual, RLdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
+    RRdrivePIDout = (RRdrivePID.calculate(RRdrivevelactual, RRdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
 
-    //write PID calculations and speeds for drive
+    //FF calculations, both in units of volts
+    FLturnFFout = FLturnFF.calculate(FLturnerror);
+    FRturnFFout = FRturnFF.calculate(FRturnerror);
+    RLturnFFout = RLturnFF.calculate(RLturnerror);
+    RRturnFFout = RRturnFF.calculate(RRturnerror);
+    FLdriveFFout = FLdriveFF.calculate(FLdriveveldes);
+    FRdriveFFout = FRdriveFF.calculate(FRdriveveldes);
+    RLdriveFFout = RLdriveFF.calculate(RLdriveveldes);
+    RRdriveFFout = RRdriveFF.calculate(RRdriveveldes);
+
+    //write PID calculations and speeds for drive + turn
     FLdrive.setVoltage(0);
     FRdrive.setVoltage(0);
     RLdrive.setVoltage(0);
@@ -482,12 +494,6 @@ public class swervedrive extends SubsystemBase {
     RRturnposactual = -(RRturnraw - (pi*Math.signum(RRturnraw)));
     //gyro
     headingactual = MathUtil.angleModulus((-gyro.getAngle()/180)*pi);
-    //angle error calcs
-    FLturnerror = Math.abs(FLturnposactual - FLturnposdes);
-    FRturnerror = Math.abs(FRturnposactual - FRturnposdes);
-    RLturnerror = Math.abs(RLturnposactual - RLturnposdes);
-    RRturnerror = Math.abs(RRturnposactual - RRturnposdes);
-    headingerror = Math.abs(headingactual - headingdes);
 
   }
 }

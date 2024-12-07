@@ -18,8 +18,6 @@ public class Robot extends TimedRobot {
   private final swervedrive swervedrive = new swervedrive();
   private final drivercontrols dcontrols = new drivercontrols(0);
 
-  //telemetry object for writing data to dashboard
-
   @Override
   public void robotInit() {
     m_robotContainer = new RobotContainer();
@@ -71,6 +69,9 @@ public class Robot extends TimedRobot {
       velocities[2], 
       dcontrols.heading(), 
       dcontrols.buttons()[0]);
+
+      if (dcontrols.buttons()[1]) {swervedrive.zero();}
+
     swervedrive.telemetry();
   }
 

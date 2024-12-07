@@ -16,7 +16,7 @@ public class drivercontrols extends SubsystemBase {
   private final SlewRateLimiter Xslew;
   private final SlewRateLimiter Yslew;
   private final SlewRateLimiter Zslew;
-  private static final double Xrate = 2.5; //m/s^2
+  private static final double Xrate = 2.5; //m/s^2, units/s per second
   private static final double Yrate = 2.5; //m/s^2
   private static final double Zrate = 1*pi; //rads/s^2
   private static final double Xdeadband = 0.1;
@@ -45,6 +45,7 @@ public class drivercontrols extends SubsystemBase {
 
   public boolean[] buttons() {
     return new boolean[] {
+      xbox.getLeftBumper(),
       xbox.getLeftStickButton()
     };
   } 
