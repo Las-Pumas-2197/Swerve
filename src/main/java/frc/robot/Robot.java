@@ -62,6 +62,7 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
 
+    //write velocities to drivetrain
     double[] velocities = dcontrols.velocities(5, 2*Math.PI);
     swervedrive.drive(
       velocities[0], 
@@ -70,6 +71,7 @@ public class Robot extends TimedRobot {
       dcontrols.heading(), 
       dcontrols.buttons()[0]);
 
+      //zero gyro when left stick button depressed
       if (dcontrols.buttons()[1]) {swervedrive.zero();}
 
     swervedrive.telemetry();
