@@ -1,6 +1,7 @@
 // Copyright (c) FIRST and other WPILib contributors.
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
+// send help my brain is pudding
 
 package frc.robot.drivetrain;
 
@@ -166,6 +167,7 @@ public class swervedrive extends SubsystemBase {
   private static final double headingFFkA = 0.1; //needs calculated!!!! in V/rads/s^2
 
   //drive constraints for motion profile
+  //constraint is important for traction, if accleration is too high then wheel slip may occur and loss of encoder steps
   private static final double maxmodulevelmps = 5.7; //needs measured!!!!! calculated at 5.7 m/s
   private static final double maxmoduleaclmps = 2.5; //needs measured!!!!!, units m/s^2
   private static final double drivevelconstraint = 5.7;
@@ -173,14 +175,14 @@ public class swervedrive extends SubsystemBase {
 
   //max limits for turn and constraints, constraints must be equal or less than maximum
   private static final double maxmodulevelrads = 4*pi; //needs measured!!!!! units rads/s
-  private static final double maxmoduleaclrads = 8*pi; //needs measured!!!!! units rads/s^2
-  private static final double turnvelconstraint = 4*pi; //based off max
-  private static final double turnaclconstraint = 8*pi; 
+  private static final double maxmoduleaclrads = 8*pi; //needs measured!!!!! units rads/s^2 likely very high due to low inertia
+  private static final double turnvelconstraint = 4*pi;
+  private static final double turnaclconstraint = 8*pi;
 
   //heading limits and constraints for motion profile
-  private static final double maxheadingvelrads = 2.11*pi; //needs measured!!!!!
+  private static final double maxheadingvelrads = 2.11*pi; //needs measured!!!!! calculated at 2.11 rads/s
   private static final double maxheadingaclrads = 1*pi; //needs measured!!!!!
-  private static final double headingvelconstraint = 2*pi; //based off max
+  private static final double headingvelconstraint = 2*pi;
   private static final double headingaclconstraint = 1*pi;
 
   //voltage constraints, 12 is used for consistency and compensation for battery volt sag
@@ -259,7 +261,7 @@ public class swervedrive extends SubsystemBase {
     );
 
     //instantiate trapezoidal profile, drive in m/s and m/s^2, heading/turn in rads/s and rads/s^2
-    driveprofile = new TrapezoidProfile.Constraints(drivevelconstraint, driveaclconstraint);
+    driveprofile = new TrapezoidProfile.Constraints(drivevelconstraint, driveaclconstraint); //not used currently
     turnprofile = new TrapezoidProfile.Constraints(turnvelconstraint, turnaclconstraint);
     headingprofile = new TrapezoidProfile.Constraints(headingvelconstraint, headingaclconstraint);  
 
@@ -323,17 +325,12 @@ public class swervedrive extends SubsystemBase {
       Zinput = Zrotdes;
     }
 
-    //angle error calcs, trig is resource heavy so may need optimization if loop overrun occurs
-    double FLturnerrorraw = FLturnposactual - FLturnposdes;
-    double FRturnerrorraw = FRturnposactual - FRturnposdes;
-    double RLturnerrorraw = RLturnposactual - RLturnposdes;
-    double RRturnerrorraw = RRturnposactual - RRturnposdes;
-    double headingerrorraw = headingactual - headingdes;
-    FLturnerror = Math.atan2(Math.sin(FLturnerrorraw), Math.cos(FLturnerrorraw));
-    FRturnerror = Math.atan2(Math.sin(FRturnerrorraw), Math.cos(FRturnerrorraw));
-    RLturnerror = Math.atan2(Math.sin(RLturnerrorraw), Math.cos(RLturnerrorraw));
-    RRturnerror = Math.atan2(Math.sin(RRturnerrorraw), Math.cos(RRturnerrorraw));
-    headingerror = Math.atan2(Math.sin(headingerrorraw), Math.cos(headingerrorraw));
+    //angle error calcs with modulo to wrap for some edge cases
+    FLturnerror = MathUtil.angleModulus(FLturnposdes - FLturnposactual);
+    FRturnerror = MathUtil.angleModulus(FRturnposdes - FRturnposactual);
+    RLturnerror = MathUtil.angleModulus(RLturnposdes - RLturnposactual);
+    RRturnerror = MathUtil.angleModulus(RRturnposdes - RRturnposactual);
+    headingerror = MathUtil.angleModulus(headingdes - headingactual);
 
     //Chassis Speeds object for IK calcs
     ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
@@ -368,10 +365,10 @@ public class swervedrive extends SubsystemBase {
     RRdriveveldes = optimizedstates[3].speedMetersPerSecond * Math.cos(RRturnerror);
 
     //calculate PIDs, units of rads for turn, units of m/s for drive, converted to volts
-    FLturnPIDout = (FLturnPID.calculate(FLturnposactual, FLturnposdes) / 2*pi) * maxappliedvoltage;
-    FRturnPIDout = (FRturnPID.calculate(FRturnposactual, FRturnposdes) / 2*pi) * maxappliedvoltage;
-    RLturnPIDout = (RLturnPID.calculate(RLturnposactual, RLturnposdes) / 2*pi) * maxappliedvoltage;
-    RRturnPIDout = (RRturnPID.calculate(RRturnposactual, RRturnposdes) / 2*pi) * maxappliedvoltage;
+    FLturnPIDout = (FLturnPID.calculate(FLturnposactual, FLturnposdes) / maxmodulevelrads) * maxappliedvoltage;
+    FRturnPIDout = (FRturnPID.calculate(FRturnposactual, FRturnposdes) / maxheadingvelrads) * maxappliedvoltage;
+    RLturnPIDout = (RLturnPID.calculate(RLturnposactual, RLturnposdes) / maxheadingvelrads) * maxappliedvoltage;
+    RRturnPIDout = (RRturnPID.calculate(RRturnposactual, RRturnposdes) / maxmodulevelrads) * maxappliedvoltage;
     FLdrivePIDout = (FLdrivePID.calculate(FLdrivevelactual, FLdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
     FRdrivePIDout = (FRdrivePID.calculate(FRdrivevelactual, FRdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
     RLdrivePIDout = (RLdrivePID.calculate(RLdrivevelactual, RLdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
@@ -387,7 +384,7 @@ public class swervedrive extends SubsystemBase {
     RLdriveFFout = RLdriveFF.calculate(RLdriveveldes);
     RRdriveFFout = RRdriveFF.calculate(RRdriveveldes);
 
-    //write PID calculations and speeds for drive + turn
+    //write PID and FF calculations for drive + turn
     FLdrive.setVoltage(0);
     FRdrive.setVoltage(0);
     RLdrive.setVoltage(0);
