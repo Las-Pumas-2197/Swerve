@@ -19,9 +19,9 @@ public class drivercontrols extends SubsystemBase {
   private final SlewRateLimiter Zslew;
 
   //parameters
-  private static final double Xrate = 2.5; //m/s^2
-  private static final double Yrate = 2.5; //m/s^2
-  private static final double Zrate = 1*pi; //rads/s^2
+  private static final double Xrate = 100; //m/s^2 2.5
+  private static final double Yrate = 100; //m/s^2 2.5
+  private static final double Zrate = 100; //rads/s^2 1*pi
   private static final double Xdeadband = 0.1;
   private static final double Ydeadband = 0.1;
   private static final double Zdeadband = 0.05;
@@ -50,13 +50,13 @@ public class drivercontrols extends SubsystemBase {
     return new double[] {
       Xslew.calculate(
         MathUtil.applyDeadband(
-          -Math.pow(LYaxis, 2) * maxlinspeed, Xdeadband, maxlinspeed)),
+          -LYaxis * maxlinspeed, Xdeadband, maxlinspeed)),
       Yslew.calculate(
         MathUtil.applyDeadband(
-          -Math.pow(LXaxis, 2) * maxlinspeed, Ydeadband, maxlinspeed)),
+          -LXaxis * maxlinspeed, Ydeadband, maxlinspeed)),
       Zslew.calculate(
         MathUtil.applyDeadband(
-          -Math.pow(LZaxis, 2) * maxlinspeed, Zdeadband, maxrotspeed)),
+          -LZaxis * maxlinspeed, Zdeadband, maxrotspeed)),
     };
   }
 

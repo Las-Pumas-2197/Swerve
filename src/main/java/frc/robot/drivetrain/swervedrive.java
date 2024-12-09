@@ -148,9 +148,9 @@ public class swervedrive extends SubsystemBase {
   //tuning parameters for PID loops and FFs, FFs not implemented yet
   private static final double turnPIDkP = 0.01; //previously 1.25 in v5.2, tune again
   private static final double turnPIDkD = 0; //previously 0.35 in v5.2, tune again
-  private static final double turnFFkS = 0.1; //needs measured!!!!! in V
-  private static final double turnFFkV = 0.94; //needs measured!!!! in V/rads/s
-  private static final double turnFFkA = 0.1; //needs measured!!!!, V/rads/s^2, omission is probably ok due to low inertia
+  private static final double turnFFkS = 0.15; //needs measured!!!!! in V
+  private static final double turnFFkV = 0.94; //needs measured!!!! in V/rads/s 0.94 calculated
+  private static final double turnFFkA = 0; //needs measured!!!!, V/rads/s^2, omission is probably ok due to low inertia
 
   //tuning parameters for drive loops and FFs
   private static final double drivePIDkP = 0.01; 
@@ -369,30 +369,30 @@ public class swervedrive extends SubsystemBase {
     FRturnPIDout = (FRturnPID.calculate(FRturnposactual, FRturnposdes) / maxheadingvelrads) * maxappliedvoltage;
     RLturnPIDout = (RLturnPID.calculate(RLturnposactual, RLturnposdes) / maxheadingvelrads) * maxappliedvoltage;
     RRturnPIDout = (RRturnPID.calculate(RRturnposactual, RRturnposdes) / maxmodulevelrads) * maxappliedvoltage;
-    FLdrivePIDout = (FLdrivePID.calculate(FLdrivevelactual, FLdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
-    FRdrivePIDout = (FRdrivePID.calculate(FRdrivevelactual, FRdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
-    RLdrivePIDout = (RLdrivePID.calculate(RLdrivevelactual, RLdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
-    RRdrivePIDout = (RRdrivePID.calculate(RRdrivevelactual, RRdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
+    //FLdrivePIDout = (FLdrivePID.calculate(FLdrivevelactual, FLdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
+    //FRdrivePIDout = (FRdrivePID.calculate(FRdrivevelactual, FRdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
+    //RLdrivePIDout = (RLdrivePID.calculate(RLdrivevelactual, RLdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
+    //RRdrivePIDout = (RRdrivePID.calculate(RRdrivevelactual, RRdriveveldes) / maxmodulevelmps) * maxappliedvoltage;
 
     //FF calculations, both in units of volts
     FLturnFFout = FLturnFF.calculate(FLturnerror);
     FRturnFFout = FRturnFF.calculate(FRturnerror);
     RLturnFFout = RLturnFF.calculate(RLturnerror);
     RRturnFFout = RRturnFF.calculate(RRturnerror);
-    FLdriveFFout = FLdriveFF.calculate(FLdriveveldes);
-    FRdriveFFout = FRdriveFF.calculate(FRdriveveldes);
-    RLdriveFFout = RLdriveFF.calculate(RLdriveveldes);
-    RRdriveFFout = RRdriveFF.calculate(RRdriveveldes);
+    //FLdriveFFout = FLdriveFF.calculate(FLdriveveldes);
+    //FRdriveFFout = FRdriveFF.calculate(FRdriveveldes);
+    //RLdriveFFout = RLdriveFF.calculate(RLdriveveldes);
+    //RRdriveFFout = RRdriveFF.calculate(RRdriveveldes);
 
     //write PID and FF calculations for drive + turn
     FLdrive.setVoltage(0);
     FRdrive.setVoltage(0);
     RLdrive.setVoltage(0);
     RRdrive.setVoltage(0);
-    FLturn.setVoltage(0);
-    FRturn.setVoltage(0);
-    RLturn.setVoltage(0);
-    RRturn.setVoltage(0);
+    FLturn.setVoltage(FLturnFFout);
+    FRturn.setVoltage(FRturnFFout);
+    RLturn.setVoltage(RLturnFFout);
+    RRturn.setVoltage(RRturnFFout);
   }
 
   /**Zero the gyroscope of the drivetrain.*/
