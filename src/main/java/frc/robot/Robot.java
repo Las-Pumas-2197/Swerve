@@ -7,25 +7,24 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.drivetrain.swervedrive;
-import frc.robot.utils.drivercontrols;
+
 public class Robot extends TimedRobot {
-  private Command m_autonomousCommand;
 
-  private RobotContainer m_robotContainer;
+  //auto command, currently no command
+  private Command autonomousCommand;
 
-  //swervedrive stuff
-  private final swervedrive swervedrive = new swervedrive();
-  private final drivercontrols dcontrols = new drivercontrols(0);
+  //robot container instance
+  private SwerveBot robot;
 
   @Override
   public void robotInit() {
-    m_robotContainer = new RobotContainer();
+    robot = new SwerveBot();
   }
 
   @Override
   public void robotPeriodic() {
     CommandScheduler.getInstance().run();
+    robot.telemetry();
   }
 
   @Override
@@ -39,10 +38,10 @@ public class Robot extends TimedRobot {
 
   @Override
   public void autonomousInit() {
-    m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    autonomousCommand = robot.getAutonomousCommand();
 
-    if (m_autonomousCommand != null) {
-      m_autonomousCommand.schedule();
+    if (autonomousCommand != null) {
+      autonomousCommand.schedule();
     }
   }
 
@@ -54,27 +53,14 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopInit() {
-    if (m_autonomousCommand != null) {
-      m_autonomousCommand.cancel();
+    if (autonomousCommand != null) {
+      autonomousCommand.cancel();
     }
   }
 
   @Override
   public void teleopPeriodic() {
-
-    //write velocities to drivetrain
-    double[] velocities = dcontrols.velocities(5, 2*Math.PI);
-    swervedrive.drive(
-      velocities[0], 
-      velocities[1], 
-      velocities[2], 
-      dcontrols.heading(), 
-      dcontrols.buttons()[0]);
-
-      //zero gyro when left stick button depressed
-      if (dcontrols.buttons()[1]) {swervedrive.zero();}
-
-    swervedrive.telemetry();
+    robot.getTeleopCommands();
   }
 
   @Override

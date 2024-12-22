@@ -16,7 +16,7 @@ Delays in absolute encoder readings may be contributing some hysteresis.
 Implementation of FFs may help by reducing dependence on feedback controller (PIDs), and increase system performance.
 Moving PID and FF calculation to spark maxes may be neccesary in v6 to improve performance.
 
-Constants that need measured:
+Constants that need measured DONE:
 turnFFkS, module azimuth kS
 turnFFkV, module azumuth kV
 turnFFkA, module azimuth kA
@@ -33,4 +33,24 @@ modulemaxaclrads, max acheivable rotational acceleration of module
 headingmaxvelrads, max acheivable rotational velocity of entire robot
 headingmaxaclrads, max acheivable rotational accleration of entire robot
 
-possibly develop swerveID to assist with calculating values?
+possibly develop swerveID to assist with calculating values? done
+
+drive velocity PID control is currently in the works, under open-loop FF control only with good performance
+drive velocity PID under development
+
+Swerve v6.0
+complete rewrite in command with many functions now subclassed to limit abstract single-class nature of v5
+swervemodules now subclassed from swervemain
+odometry and pose estimation now implemented, needs tested
+trajectory computation also added, but not tested
+specific robot poses should be saved as data and then trajectories to them should be generated and followed with new code
+pose estimation using odometry + limelight for correction possible in later iterations???
+
+total changenotes:
+new swervemodule class written as subclass to swervemain, handles all low-level functions of modules
+new swervemain class written to handle all high-level functions of modules and supporting hardware
+odometry and pose estimation written into swervemain, needs tested
+drivercontrols class renamed to drivercontroller 
+XboxController object in drivercontroller converted to CommandXboxController to support new command structure of code
+telemetry off-boarded again, properly implemented this time with subsystem injected through robot container (SwerveBot class)
+most high-level functions now managed in robot container and voids called up in robot class
