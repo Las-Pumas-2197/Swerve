@@ -44,7 +44,7 @@ public class SwerveBot {
 
   public void telemetry() {
     telemetry.swervemain(); //posts swervemain data
-    //telemetry.swervemodule();
+    telemetry.swervemoduleFL();
     telemetry.currentpose();
   }
 

@@ -44,14 +44,16 @@ public class swervemodule extends SubsystemBase {
   //misc vars for telemetry
   private double azimuth_posdes;
   private double azimuth_posact;
+  private double azimuth_err;  
+  private double azimuth_pidout;
+  private double azimuth_ffout;
+  private double azimuth_volts;
   private double drive_veldes; //used for OL control when not in CL pos control
   private double drive_velact;
   private double drive_posact;
-  private double azimuth_err;
   private double drive_err;
-  private double azimuth_pidout;
-  private double azimuth_ffout;
   private double drive_ffout;
+  private double drive_volts;
 
   /**Swerve module constructor. Feed just the node IDs of the drive and azimuth nodes, as well as the offset of the module
    * (dependent on the position the module is in).
@@ -132,8 +134,10 @@ public class swervemodule extends SubsystemBase {
     drive_ffout = ff_drive.calculate(drive_veldes);
 
     //run command using above calcs, azimuth PID must be normalized to units of volts
-    m_azimuth.setVoltage(((azimuth_pidout / moduleconfig.azimuth_maxvel) * moduleconfig.maxvolts) + azimuth_ffout);
-    m_drive.setVoltage(drive_ffout);
+    azimuth_volts = ((azimuth_pidout / moduleconfig.azimuth_maxvel) * moduleconfig.maxvolts) + azimuth_ffout;
+    drive_volts = drive_ffout;
+    //m_azimuth.setVoltage(azimuth_volts);
+    //m_drive.setVoltage(drive_volts);
   }
 
   /**Returns an array of doubles containing the telemetry of the module. Data is as follows:
@@ -143,10 +147,12 @@ public class swervemodule extends SubsystemBase {
    *    <li> 2 = azimuth_err
    *    <li> 3 = azimuth_pidout
    *    <li> 4 = azimuth_ffout
-   *    <li> 5 = drive_veldes
-   *    <li> 6 = drive_velact
-   *    <li> 7 = drive_err
-   *    <li> 8 = drive_ffout
+   *    <li> 5 = azimuth_volts
+   *    <li> 6 = drive_veldes
+   *    <li> 7 = drive_velact
+   *    <li> 8 = drive_err
+   *    <li> 9 = drive_ffout
+   *    <li> 10 = drive_volts
    * </ul>
   */
   public double[] getTelemetry() {
@@ -156,10 +162,12 @@ public class swervemodule extends SubsystemBase {
       azimuth_err,
       azimuth_pidout,
       azimuth_ffout,
+      azimuth_volts,
       drive_veldes,
       drive_velact,
       drive_err,
-      drive_ffout
+      drive_ffout,
+      drive_volts
     };
   }
 
@@ -168,7 +176,7 @@ public class swervemodule extends SubsystemBase {
 
     //apply offset to encoder and write actual data to internal vars
     //possibly run offsets in swervemain in later iterations
-    azimuth_posact = -(enc_azimuth.getPosition() + moduleoffset - (pi*Math.signum(enc_azimuth.getPosition() + moduleoffset)));
+    azimuth_posact = MathUtil.angleModulus(enc_azimuth.getPosition() + moduleoffset);
     drive_velact = enc_drive.getVelocity();
     drive_posact = enc_drive.getPosition();
 

@@ -5,7 +5,6 @@
 package frc.robot.subsystems.drivetrain;
 
 import com.ctre.phoenix6.hardware.Pigeon2;
-import com.ctre.phoenix6.mechanisms.swerve.SwerveModule;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -133,10 +132,12 @@ public class swervemain extends SubsystemBase {
    *    <li> 2 = azimuth_err
    *    <li> 3 = azimuth_pidout
    *    <li> 4 = azimuth_ffout
-   *    <li> 5 = drivevel_des
-   *    <li> 6 = drivevel_act
-   *    <li> 7 = drive_err
-   *    <li> 8 = drive_ffout
+   *    <li> 5 = azimuth_volts
+   *    <li> 6 = drivevel_des
+   *    <li> 7 = drivevel_act
+   *    <li> 8 = drive_err
+   *    <li> 9 = drive_ffout
+   *    <li> 10 = drive_volts
    * </ul>
   */
   public double[][] getModuleTelemetry() {
@@ -219,14 +220,28 @@ public class swervemain extends SubsystemBase {
     };
 
     //multiply speed desired by cosine of angle error
-    optimizedstates[0].speedMetersPerSecond *= 
-      Math.cos(optimizedstates[0].angle.getRadians() - FLmodule.getState().angle.getRadians());
-    optimizedstates[1].speedMetersPerSecond *= 
-      Math.cos(optimizedstates[1].angle.getRadians() - FRmodule.getState().angle.getRadians());
-    optimizedstates[2].speedMetersPerSecond *= 
-      Math.cos(optimizedstates[2].angle.getRadians() - RLmodule.getState().angle.getRadians());
-    optimizedstates[3].speedMetersPerSecond *= 
-      Math.cos(optimizedstates[3].angle.getRadians() - RRmodule.getState().angle.getRadians());
+    optimizedstates[0].speedMetersPerSecond *= Math.cos(FLmodule.getTelemetry()[2]);
+    optimizedstates[1].speedMetersPerSecond *= Math.cos(FRmodule.getTelemetry()[2]);
+    optimizedstates[2].speedMetersPerSecond *= Math.cos(RLmodule.getTelemetry()[2]);
+    optimizedstates[3].speedMetersPerSecond *= Math.cos(RRmodule.getTelemetry()[2]);
+
+    /**
+    //alternate method to derate speed based on module error, takes highest error and multiplies all speeds by inverse
+    //checks for maximum error, get inverse, multiple speed by the multiplier
+    double errormult = 
+      Math.cos(
+        Math.max(
+          Math.max(
+            FLmodule.getTelemetry()[2],
+            FRmodule.getTelemetry()[2]),
+          Math.max(
+            RLmodule.getTelemetry()[2],
+            RRmodule.getTelemetry()[2])));
+    optimizedstates[0].speedMetersPerSecond *= errormult;
+    optimizedstates[1].speedMetersPerSecond *= errormult;
+    optimizedstates[2].speedMetersPerSecond *= errormult;
+    optimizedstates[3].speedMetersPerSecond *= errormult;
+    */
 
     //write states
     FLmodule.setState(optimizedstates[0]); //FL
