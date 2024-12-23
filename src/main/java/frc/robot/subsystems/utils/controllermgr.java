@@ -58,13 +58,13 @@ public class controllermgr extends SubsystemBase {
     return new double[] {
       Xslew.calculate(
         MathUtil.applyDeadband(
-          -Math.pow(LYaxis, axispow) * maxlinvel, Xdeadband, maxlinvel)),
+          (Math.pow(LYaxis, axispow) * Math.signum(LYaxis)) * maxlinvel, Xdeadband, maxlinvel)),
       Yslew.calculate(
         MathUtil.applyDeadband(
-          -Math.pow(LXaxis, axispow) * maxlinvel, Ydeadband, maxlinvel)),
+          (Math.pow(LXaxis, axispow) * Math.signum(LXaxis)) * maxlinvel, Ydeadband, maxlinvel)),
       Zslew.calculate(
         MathUtil.applyDeadband(
-          -Math.pow(LZaxis, axispow) * maxrotvel, Zdeadband, maxrotvel)),
+          (Math.pow(LZaxis, axispow) * Math.signum(LZaxis)) * maxrotvel, Zdeadband, maxrotvel)),
     };
   }
 

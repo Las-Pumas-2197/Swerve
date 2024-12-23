@@ -32,7 +32,7 @@ public class SwerveBot {
         controller.velocities()[1],
         controller.velocities()[2],
         controller.heading(),
-        false),
+        true),
         swervedrive));
   }
 
@@ -44,7 +44,8 @@ public class SwerveBot {
 
   public void telemetry() {
     telemetry.swervemain(); //posts swervemain data
-    telemetry.swervemodule();
+    //telemetry.swervemodule();
+    telemetry.currentpose();
   }
 
   public Command getAutonomousCommand() {

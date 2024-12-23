@@ -35,11 +35,13 @@ public class telemetrymgr extends SubsystemBase {
     SmartDashboard.putNumber("heaidng_ffout", subsys_drive.getMainTelemetry()[7]);
   }
 
-  /**Posts swervemodule telemetry data to shuffleboard. This is a significant amount of data so some formatting 
-   * may be needed in Shuffleboard.*/
-  public void swervemodule() {
+  public void currentpose(){
+    SmartDashboard.putNumber("currentpose_X", subsys_drive.getPose().getX());
+    SmartDashboard.putNumber("currentpose_Y", subsys_drive.getPose().getY());
+    SmartDashboard.putNumber("currentpose_heading", subsys_drive.getPose().getRotation().getRadians());
+  }
 
-    //FL
+  public void swervemoduleFL() {
     SmartDashboard.putNumber("FL_azimuth_posdes", subsys_drive.getModuleTelemetry()[0][0]);
     SmartDashboard.putNumber("FL_azimuth_posact", subsys_drive.getModuleTelemetry()[0][1]);
     SmartDashboard.putNumber("FL_azimuth_err", subsys_drive.getModuleTelemetry()[0][2]);
@@ -49,8 +51,9 @@ public class telemetrymgr extends SubsystemBase {
     SmartDashboard.putNumber("FL_drive_velact", subsys_drive.getModuleTelemetry()[0][6]);
     SmartDashboard.putNumber("FL_drive_err", subsys_drive.getModuleTelemetry()[0][7]);
     SmartDashboard.putNumber("FL_drive_ffout", subsys_drive.getModuleTelemetry()[0][8]);
+  }
 
-    //FR
+  public void swervemoduleFR() {
     SmartDashboard.putNumber("FR_azimuth_posdes", subsys_drive.getModuleTelemetry()[1][0]);
     SmartDashboard.putNumber("FR_azimuth_posact", subsys_drive.getModuleTelemetry()[1][1]);
     SmartDashboard.putNumber("FR_azimuth_err", subsys_drive.getModuleTelemetry()[1][2]);
@@ -60,8 +63,9 @@ public class telemetrymgr extends SubsystemBase {
     SmartDashboard.putNumber("FR_drive_velact", subsys_drive.getModuleTelemetry()[1][6]);
     SmartDashboard.putNumber("FR_drive_err", subsys_drive.getModuleTelemetry()[1][7]);
     SmartDashboard.putNumber("FR_drive_ffout", subsys_drive.getModuleTelemetry()[1][8]);
+  }
 
-    //RL
+  public void swervemoduleRL() {
     SmartDashboard.putNumber("RL_azimuth_posdes", subsys_drive.getModuleTelemetry()[2][0]);
     SmartDashboard.putNumber("RL_azimuth_posact", subsys_drive.getModuleTelemetry()[2][1]);
     SmartDashboard.putNumber("RL_azimuth_err", subsys_drive.getModuleTelemetry()[2][2]);
@@ -71,8 +75,9 @@ public class telemetrymgr extends SubsystemBase {
     SmartDashboard.putNumber("RL_drive_velact", subsys_drive.getModuleTelemetry()[2][6]);
     SmartDashboard.putNumber("RL_drive_err", subsys_drive.getModuleTelemetry()[2][7]);
     SmartDashboard.putNumber("RL_drive_ffout", subsys_drive.getModuleTelemetry()[2][8]);
+  }
 
-    //RR
+  public void swervemoduleRR() {
     SmartDashboard.putNumber("RR_azimuth_posdes", subsys_drive.getModuleTelemetry()[3][0]);
     SmartDashboard.putNumber("RR_azimuth_posact", subsys_drive.getModuleTelemetry()[3][1]);
     SmartDashboard.putNumber("RR_azimuth_err", subsys_drive.getModuleTelemetry()[3][2]);

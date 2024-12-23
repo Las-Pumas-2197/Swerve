@@ -5,6 +5,7 @@
 package frc.robot.subsystems.drivetrain;
 
 import com.ctre.phoenix6.hardware.Pigeon2;
+import com.ctre.phoenix6.mechanisms.swerve.SwerveModule;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -235,5 +236,14 @@ public class swervemain extends SubsystemBase {
   }
 
   @Override
-  public void periodic() {}
+  public void periodic() {
+
+    //update odometry 
+    odometry.update(new Rotation2d(heading_act), new SwerveModulePosition[] {
+      FLmodule.getPosition(),
+      FRmodule.getPosition(),
+      RLmodule.getPosition(),
+      RRmodule.getPosition()
+    });
+  }
 }
