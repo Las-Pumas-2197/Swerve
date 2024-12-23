@@ -16,7 +16,7 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.drivetrain.swerveconfig.mainconfig;
 import frc.robot.subsystems.drivetrain.swerveconfig.moduleconfig;
@@ -112,8 +112,8 @@ public class swervemain extends SubsystemBase {
   }
 
   /**Resets the gyroscope of the robot. */
-  public Command resetGyro() {
-    return runOnce(() -> gyro.reset());
+  public InstantCommand resetGyro() {
+    return new InstantCommand(() -> gyro.reset());
   }
 
   /**Returns a 2-dimensional table of doubles containing telemetry data. First integer is the module to address, second
@@ -148,13 +148,17 @@ public class swervemain extends SubsystemBase {
   }
 
   /**Returns an array containing pertinate drivetrain data.
-   * @apiNote 0 = Xspeed_des
-   * @apiNote 1 = Yspeed_des
-   * @apiNote 2 = Zinput
-   * @apiNote 3 = Zrot
-   * @apiNote 4 = heading_pidout
-   * @apiNote 5 = heading_ffout
-   * @apiNote Note that if HeadingCL = true, Zinput = heading_pidout + heading_ffout. If false, Zinput = Zrot.
+   * <p> Note that if HeadingCL = true, Zinput = heading_pidout + heading_ffout. If false, Zinput = Zrot.
+   * <ul>
+   *    <li> 0 = Xspeed_des
+   *    <li> 1 = Yspeed_des
+   *    <li> 2 = Zinput
+   *    <li> 3 = Zrot
+   *    <li> 4 = heading_act
+   *    <li> 5 = heading_des
+   *    <li> 6 = heading_pidout
+   *    <li> 7 = heading_ffout
+   * </ul>
   */
   public double[] getMainTelemetry() {
     return new double[] {
@@ -162,10 +166,15 @@ public class swervemain extends SubsystemBase {
       Yspeed_des,
       Zinput,
       Zrot_des,
+      heading_act,
+      heading_des,
       heading_pidout,
       heading_ffout
     };
   }
+
+  //Note that drive() must be in a void method or will trip illegal arg for calling multiple commands from the same subsys,
+  //even though technically are not the same subsystem since they are different instances, will investigate bug
 
   /** Operate drivetrain using passed speeds. If using with a trajectory generator, do NOT use closed loop
    * heading control, as that is handled by the trajectory controller in that state.
@@ -187,7 +196,7 @@ public class swervemain extends SubsystemBase {
 
     //conditional for Z input to IK calcs
     if (HeadingCL) {
-      heading_ffout = (ff_heading.calculate(heading_err) / moduleconfig.maxvolts) * mainconfig.heading_maxvel; //convert to rads
+      heading_ffout = (ff_heading.calculate(heading_err) / moduleconfig.maxvolts); //convert to rads
       heading_pidout = pid_heading.calculate(heading_act, heading_des);
       Zinput = heading_pidout + heading_ffout;
     } else {

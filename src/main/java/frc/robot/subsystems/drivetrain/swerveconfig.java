@@ -74,9 +74,9 @@ public class swerveconfig {
         public static final double pid_headingkP = 0.01;
         public static final double pid_headingkI = 0;
         public static final double pid_headingkD = 0;
-        public static final double ff_headingkS = 0; //need measured
+        public static final double ff_headingkS = 0.1; //need measured
         public static final double ff_headingkV = 5.45; //calculated theoretical
-        public static final double ff_headingkA = 0.1;
+        public static final double ff_headingkA = 0.5; //need measured
         public static final double heading_maxvel = 2*pi; //need calculated
         public static final double heading_maxacl = 1*pi; //need calculated
         public static final TrapezoidProfile.Constraints heading_constraints=

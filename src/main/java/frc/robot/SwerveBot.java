@@ -6,53 +6,45 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import frc.robot.subsystems.drivetrain.swervemain;
-import frc.robot.subsystems.drivetrain.swerveconfig.mainconfig;
-import frc.robot.subsystems.utils.drivercontroller;
-import frc.robot.subsystems.utils.telemetry;
+import frc.robot.subsystems.utils.controllermgr;
+import frc.robot.subsystems.utils.telemetrymgr;
 
 public class SwerveBot {
 
   //subsystem instances
   private final swervemain swervedrive;
-  private final drivercontroller drivercontrols;
-  private final telemetry telemetrymanager; 
-  private final CommandXboxController xboxController;
-
-  //drivercontrols velocities array
-  private final double[] velocities;
+  private final telemetrymgr telemetry; 
+  private final controllermgr controller;
 
   public SwerveBot() {
 
     //subsytem declarations
-    swervedrive = new swervemain();
-    drivercontrols = new drivercontroller(0);
-    telemetrymanager = new telemetry(swervedrive);
-
-    //injected objects
-    xboxController = drivercontrols.xboxController();
-
-    //velocities array
-    velocities = drivercontrols.velocities(mainconfig.maxlinvel_teleop, mainconfig.maxrotvel_teleop);
+    swervedrive = new swervemain();  
+    telemetry = new telemetrymgr(swervedrive);
+    controller = new controllermgr();
+    
+    //default command for swervedrive
+    swervedrive.setDefaultCommand(new RunCommand(() -> 
+      swervedrive.drive(
+        controller.velocities()[0],
+        controller.velocities()[1],
+        controller.velocities()[2],
+        controller.heading(),
+        false),
+        swervedrive));
   }
 
   public void getTeleopCommands() {
 
-    //zero gyro when A is pressed
-    xboxController.a().onTrue(swervedrive.resetGyro());
-
-    //drive
-    swervedrive.drive(
-      velocities[0],
-      velocities[1],
-      velocities[2],
-      drivercontrols.heading(),
-      true);
+    //zero gyro when left stick button is pressed
+    controller.drive_controller.leftStick().onTrue(swervedrive.resetGyro());
   }
 
   public void telemetry() {
-    telemetrymanager.swervemain(); //posts swervemain data
+    telemetry.swervemain(); //posts swervemain data
+    telemetry.swervemodule();
   }
 
   public Command getAutonomousCommand() {
