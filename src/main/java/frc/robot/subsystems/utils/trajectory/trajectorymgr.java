@@ -73,6 +73,7 @@ public class trajectorymgr extends SubsystemBase {
     pid_heading.enableContinuousInput(-pi, pi);
   }
 
+  /**
   public Command followtrajectoryteleop(Pose2d startpose, Translation2d[] waypoints, Pose2d endpose) {
 
     //generate trajectory from 
@@ -87,12 +88,12 @@ public class trajectorymgr extends SubsystemBase {
     //trajectory follower command
     SwerveControllerCommand trajectorycommand = new SwerveControllerCommand(
       trajectory, //the trajectory generated above
-      swervedrive::getPose, //Pose2d consumer functional interface
+      swervedrive::getPose, //Pose2d consumer functional interface for supplier
       mainconfig.kinematics, //kinematics object
       pid_Xpos, //x position pid controller
       pid_Ypos, //y position pid controller
       pid_heading, //heading pid controller
-      swervedrive::setStates, //SwerveModuleState[] consumer functional interface
+      swervedrive::setStates, //SwerveModuleState[] supplier functional interface for consumer
       swervedrive);
 
     return Commands.sequence(
@@ -100,6 +101,7 @@ public class trajectorymgr extends SubsystemBase {
       trajectorycommand,
       new InstantCommand(() -> swervedrive.drive(0, 0, 0, 0, false)));
   }
+  */
 
   @Override
   public void periodic() {}
