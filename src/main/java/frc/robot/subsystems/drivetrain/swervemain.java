@@ -111,7 +111,16 @@ public class swervemain extends SubsystemBase {
     return odometry.getPoseMeters();
   }
 
-  /**Resets the gyroscope of the robot. */
+  /**Resets the pose of the robot to the passed pose.*/
+  public InstantCommand resetPose(Pose2d pose) {
+    return new InstantCommand(() -> 
+      odometry.resetPosition(
+        new Rotation2d(heading_act),
+        getPositions(),
+        pose));
+  }
+
+  /**Resets the gyroscope of the robot. Note that in current iteration this may break reported heading by odometry.*/
   public InstantCommand resetGyro() {
     return new InstantCommand(() -> gyro.reset());
   }
@@ -175,8 +184,9 @@ public class swervemain extends SubsystemBase {
     };
   }
 
-  //Note that drive() must be in a void method or will trip illegal arg for calling multiple commands from the same subsys,
-  //even though technically are not the same subsystem since they are different instances, will investigate bug
+  //Note that drive() and setStates() must be in a void method or will trip illegal arg for calling multiple commands 
+  //from the same subsys, even though technically are not the same subsystem since they are different instances, 
+  //will investigate bug at later time
 
   /** Operate drivetrain using passed speeds. If using with a trajectory generator, do NOT use closed loop
    * heading control, as that is handled by the trajectory controller in that state.
@@ -250,6 +260,16 @@ public class swervemain extends SubsystemBase {
     RRmodule.setState(optimizedstates[3]); //RR
   }
 
+  /**Directly sets the states of the modules using passed states.*/
+  public void setStates(SwerveModuleState[] states) {
+    SwerveDriveKinematics.desaturateWheelSpeeds(states, mainconfig.maxlinvel);
+    FLmodule.setState(states[0]);
+    FRmodule.setState(states[1]);
+    RLmodule.setState(states[2]);
+    RRmodule.setState(states[3]);
+  }
+
+  //update odometry in here
   @Override
   public void periodic() {
 

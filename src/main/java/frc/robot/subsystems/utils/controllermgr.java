@@ -31,7 +31,6 @@ public class controllermgr extends SubsystemBase {
 
   //vars for misc usage
   private static final double pi = Math.PI;
-  private static final double rad = 2*pi;
   private final double maxlinvel;
   private final double maxrotvel;
   private double LXaxis;
