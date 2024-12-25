@@ -27,10 +27,11 @@ public class controllermgr extends SubsystemBase {
   private static final double Ydeadband = 0.1;
   private static final double Zdeadband = 0.05;
   private static final double headingincrement = 0.1;
-  private static final double axispow = 2; //raise axis to the power of this to get finer control, higher is more progressive
+  private static final double axispow = 2; //raise axis by this power, higher is more progressive
 
   //vars for misc usage
   private static final double pi = Math.PI;
+  private static final double rad = 2*pi;
   private final double maxlinvel;
   private final double maxrotvel;
   private double LXaxis;
@@ -45,7 +46,7 @@ public class controllermgr extends SubsystemBase {
     Yslew = new SlewRateLimiter(Yrate);
     Zslew = new SlewRateLimiter(Zrate);
     maxlinvel = mainconfig.maxlinvel_teleop;
-    maxrotvel = mainconfig.maxrotvel_teleop;
+    maxrotvel = mainconfig.heading_maxvel;
   }
 
   /**Generates and array containing field-referenced velocities generated from transformed controller axis data.

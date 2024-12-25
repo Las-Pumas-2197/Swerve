@@ -7,13 +7,13 @@ package frc.robot.subsystems.drivetrain;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
 
 /**Used to store constants for the swerve drive.*/
 public class swerveconfig {
 
     //mmmmm pi
     private static final double pi = Math.PI;
+    private static final double rad = 2*pi;
 
     /**Swerve module configuration data.*/
     public class moduleconfig {
@@ -22,28 +22,29 @@ public class swerveconfig {
         public static final double maxvolts = 12;
 
         //conversion factors
-        public static final double con_azimuth_velfactor = 2*pi; //returns in rads/s
-        public static final double con_azimuth_posfactor = 2*pi; //returns in rads
-        public static final double con_drive_velfactor = (0.0762*pi / 4.71428) / 60; //returns in meters/s
-        public static final double con_drive_posfactor = (0.0762*pi / 4.71428); //returns in meters
+        public static final double con_azimuth_velfactor = rad; //returns in rads/s, natively in rot/sec
+        public static final double con_azimuth_posfactor = rad; //returns in rads
+        public static final double drive_finalratio = 4.71428; //final drive ratio
+        public static final double con_drive_velfactor = (0.0762*pi / drive_finalratio) / 60; //returns in meters/s
+        public static final double con_drive_posfactor = (0.0762*pi / drive_finalratio); //returns in meters
         
         //azimuth PID and FF gains, velocity constraints
         public static final double pid_azimuth_kP = 0.01; //needs tuned
-        public static final double pid_azimuth_kI = 0; //try not to use
-        public static final double pid_azimuth_kD = 0; //may be needed, high values will cause overshoot and hysteresis
-        public static final double ff_azimuth_kS = 0.15; //measured
-        public static final double ff_azimuth_kV = 0.94; //theoretical calculation, seems OK during testing in v5.3
-        public static final double ff_azimuth_kA = 0; //0 = infinite, may be OK to omit in FF due to low module inertia
-        public static final double azimuth_maxvel = 4*pi; //rads/s, theoretical maximum
-        public static final double azimuth_maxacl = 8*pi; //rads/s^2, unable to measure so a high value is probably ok
+        public static final double pid_azimuth_kD = 0; //may be needed
+        public static final double ff_azimuth_kS = 0; //need measured
+        public static final double ff_azimuth_kV = 0.4847; //calculated
+        public static final double ff_azimuth_kA = 0.6024; //calculated at 0.6024 linear
+        public static final double azimuth_maxvel = 3.94*rad; //rads/s
+        public static final double azimuth_maxacl = 3.17*rad; //rads/s^2, calculated off of 5lbs and stall torque
         public static final TrapezoidProfile.Constraints azimuth_constraints = 
             new TrapezoidProfile.Constraints(azimuth_maxvel, azimuth_maxacl); //send it
         
         //drive FF gains
-        public static final double ff_drive_kS = 0.1; //needs characterized, likely extremely low
-        public static final double ff_drive_kV = 2.09; //needs checked, calculated theoretical 
-        public static final double ff_drive_kA = 0.24; //needs checked, calculated theoretical
-        public static final double drive_maxvel = 5.7; //m/s, calculated maximum
+        public static final double ff_drive_kS = 0.1; //need measured
+        public static final double ff_drive_kV = 2.09; //calculated
+        public static final double ff_drive_kA = 0.23; //calculated @60lb weight, 0.45 @ 150lb dressed weight
+        public static final double drive_maxvel = 5.74; //m/s, calculated maximum @12v
+        public static final double drive_maxacl = 10.46; //m/s^2, absolute max calculated before wheel slip
     }
 
     /**Main swerve drive configuration data.*/
@@ -61,33 +62,37 @@ public class swerveconfig {
         public static final int gyroID = 20;
 
         //drivetrain dimensions for kinematics
-        public static final double trackwidth = Units.inchesToMeters(26.5);
-        public static final double wheelbase = Units.inchesToMeters(26.5);
+        public static final double trackwidth = 0.6731; //meters, 26.5 inches
+        public static final double wheelbase = 0.6731; //meters, 26.5 inches
 
         //module offsets
         public static final double FLoffset = -0.5*pi;
         public static final double FRoffset = 0*pi;
-        public static final double RLoffset = -1*pi;
-        public static final double RRoffset = -1.5*pi;
+        public static final double RLoffset = 1*pi;
+        public static final double RRoffset = 1.5*pi;
 
-        //heading constraints and profile
+        //calculations for max heaing rot velocity
+
+        //heading/rot constraints and profile
         public static final double pid_headingkP = 0.01;
-        public static final double pid_headingkI = 0;
         public static final double pid_headingkD = 0;
-        public static final double ff_headingkS = 0.1; //need measured
-        public static final double ff_headingkV = 5.45; //calculated theoretical
-        public static final double ff_headingkA = 0.5; //need measured
-        public static final double heading_maxvel = 2*pi; //need calculated
-        public static final double heading_maxacl = 1*pi; //need calculated
+        public static final double ff_headingkS = 0; //need measured
+        public static final double ff_headingkV = 0.50; //calculated
+        public static final double ff_headingkA = 0.54; //calculated 0.5419 linear
+        public static final double heading_maxvel = 3.84*rad; //calculated
+        public static final double heading_maxacl = 3.52*rad; //calculated @60lb weight with stall torque, 1.4*rad @150lbs
+        public static final double heading_maxvel_lim = 2*rad; //limited for better control
+        public static final double heading_maxacl_lim = 1*rad; //same
         public static final TrapezoidProfile.Constraints heading_constraints=
-            new TrapezoidProfile.Constraints(heading_maxvel, heading_maxacl);
+            new TrapezoidProfile.Constraints(heading_maxvel_lim, heading_maxacl_lim);
 
-        //max velocity and acceleration constraints for drivetrain, vel in m/s, acl in m/s^2
-        public static final double maxrotvel_teleop = 2*pi; //same as heading_maxvel for now
-        public static final double maxlinvel_teleop = 3.0; //60% is good due to motor power curves and headspace for rotation
-        public static final double maxlinvel_auto = 2.0; //low and slow, speed up if needed
-        public static final double maxlinvel_turbo = 5.7; //spicy
-        public static final double maxlinacl = 3.0; //needs measured/calculated
+        //max velocity and acceleration constraints for drivetrain, vel in m/s, acl in m/s^2        
+        public static final double maxlinvel = 5.74; //max theoretical
+        public static final double maxlinacl = 10.46; //same
+        public static final double maxlinvel_teleop = 3.0; //adjust as needed
+        public static final double maxlinacl_teleop = 3.0; //same
+        public static final double maxlinvel_auto = 3.0; //adjust as needed
+        public static final double maxlinacl_auto = 3.0; //same
 
         //kinematics for drivetrain
         public static final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(

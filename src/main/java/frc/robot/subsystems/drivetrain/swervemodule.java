@@ -86,13 +86,12 @@ public class swervemodule extends SubsystemBase {
     //PID and FF controllers for turn
     pid_azimuth = new ProfiledPIDController(
       moduleconfig.pid_azimuth_kP,
-      moduleconfig.pid_azimuth_kI,
+      0,
       moduleconfig.pid_azimuth_kD,
       moduleconfig.azimuth_constraints);
     ff_azimuth = new SimpleMotorFeedforward(
       moduleconfig.ff_azimuth_kS,
-      moduleconfig.ff_azimuth_kV,
-      moduleconfig.ff_azimuth_kA); //may omit if not needed
+      moduleconfig.ff_azimuth_kV); //ignoring kA due to low inertia
 
     //FF controller for drive
     ff_drive = new SimpleMotorFeedforward(

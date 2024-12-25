@@ -67,7 +67,7 @@ public class swervemain extends SubsystemBase {
     //heading PID and FF
     pid_heading = new ProfiledPIDController(
       mainconfig.pid_headingkP,
-      mainconfig.pid_headingkI,
+      0, //not used
       mainconfig.pid_headingkD,
       mainconfig.heading_constraints);
     ff_heading = new SimpleMotorFeedforward(

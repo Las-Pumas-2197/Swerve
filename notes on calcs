@@ -69,3 +69,18 @@ Typically are used in conjuction with feed forwards to trim towards the setpoint
 
 The P is the proportional gain.
 Proportional is purely just a multiplier for the difference between the passed setpoint and the actual.
+
+The I is the integral gain.
+Reacts to steady state change based on the amount of error over time. Higher error over a short time 
+or low error over a long time will increase the output. Output will only decrease as measurement
+approaches setpoint. Should be avoided unless absolutely necessary as wind-up and hysteresis are very
+common with this strategy. Anti-windup algorithms can be used to reduce problem, but usually 
+motion profiles or controller output minimums can be used to accomodate steady state error when near
+setpoint.
+
+The D is the deriviate gain.
+Observes the time to setpoint and outputs an inversely according to how quickly the mechanism is
+approaching the target. Usually used to "ramp down" the output as it approaches setpoint to help
+dampen oscilliatory operation. Useful in cases where there is a high amount of mechanism intertia.
+
+-----------------------------------------------------------------------------------------------------
