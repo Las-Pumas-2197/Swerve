@@ -73,7 +73,6 @@ public class trajectorymgr extends SubsystemBase {
     pid_heading.enableContinuousInput(-pi, pi);
   }
 
-  /**
   public Command followtrajectoryteleop(Pose2d startpose, Translation2d[] waypoints, Pose2d endpose) {
 
     //generate trajectory from 
@@ -101,7 +100,6 @@ public class trajectorymgr extends SubsystemBase {
       trajectorycommand,
       new InstantCommand(() -> swervedrive.drive(0, 0, 0, 0, false)));
   }
-  */
 
   @Override
   public void periodic() {}
